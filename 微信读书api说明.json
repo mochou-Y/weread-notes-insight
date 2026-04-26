@@ -1,0 +1,1022 @@
+{
+  "item": [
+    {
+      "name": "Get User Notebook",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "user-agent": true,
+          "accept": true,
+          "accept-encoding": true,
+          "host": true,
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/user/notebook",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "notebook"
+          ]
+        },
+        "description": "List user's books and notebook metadata.\n\n从微信读书【我的】-【笔记】进入，“5386个笔记·留在了502本书上”，所有这些书的数据（其中有记录的包括书里有 想法、划线、书签、点评）"
+      },
+      "response": [
+        {
+          "name": "Get User Notebook",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/notebook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "notebook"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "date",
+              "value": "Sun, 26 Apr 2026 09:17:54 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json"
+            },
+            {
+              "key": "server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding, Accept-Encoding"
+            },
+            {
+              "key": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"synckey\": 1777193127,\n    \"totalBookCount\": 502,\n    \"noBookReviewCount\": 1,\n    \"books\": [\n        {\n            \"bookId\": \"22622979\",\n            \"book\": {\n                \"bookId\": \"22622979\",\n                \"title\": \"绿毛水怪\",\n                \"author\": \"王小波\",\n                \"cover\": \"https://cdn.weread.qq.com/weread/cover/69/yuewen_22622979/t6_yuewen_226229791776756455.jpg\",\n                \"version\": 1948133593,\n                \"format\": \"epub\",\n                \"type\": 0,\n                \"price\": 23,\n                \"originalPrice\": 0,\n                \"soldout\": 0,\n                \"bookStatus\": 1,\n                \"payingStatus\": 2,\n                \"payType\": 1048577,\n                \"centPrice\": 2300,\n                \"categories\": [\n                    {\n                        \"categoryId\": 100000,\n                        \"subCategoryId\": 100001,\n                        \"categoryType\": 0,\n                        \"title\": \"精品小说-社会小说\"\n                    },\n                    {\n                        \"categoryId\": 300000,\n                        \"subCategoryId\": 300004,\n                        \"categoryType\": 0,\n                        \"title\": \"文学-经典作品\"\n                    }\n                ],\n                \"hasLecture\": 0,\n                \"finished\": 1,\n                \"maxFreeChapter\": 3,\n                \"maxFreeInfo\": {\n                    \"maxFreeChapterIdx\": 3,\n                    \"maxFreeChapterUid\": 3,\n                    \"maxFreeChapterRatio\": 100\n                },\n                \"free\": 0,\n                \"mcardDiscount\": 0,\n                \"ispub\": 1,\n                \"extra_type\": 5,\n                \"cpid\": 24367662,\n                \"publishTime\": \"2018-05-01 00:00:00\",\n                \"lastChapterIdx\": 12,\n                \"paperBook\": {\n                    \"skuId\": \"\"\n                },\n                \"copyrightChapterUids\": [\n                    2\n                ],\n                \"inStoreBookId\": \"\",\n                \"blockSaveImg\": 0,\n                \"language\": \"zh\",\n                \"isTraditionalChinese\": false,\n                \"hideUpdateTime\": false,\n                \"isEPUBComics\": 0,\n                \"isVerticalLayout\": 0,\n                \"isShowTTS\": 1,\n                \"webBookControl\": 0,\n                \"selfProduceIncentive\": false,\n                \"isAutoDownload\": 1\n            },\n            \"reviewCount\": 0,\n            \"reviewLikeCount\": 0,\n            \"reviewCommentCount\": 0,\n            \"noteCount\": 0,\n            \"bookmarkCount\": 1,\n            \"sort\": 1777123166\n        },\n        {\n            \"bookId\": \"860985\",\n            \"book\": {\n                \"bookId\": \"860985\",\n                \"title\": \"孽子\",\n                \"author\": \"白先勇\",\n                \"cover\": \"https://wfqqreader-1252317822.image.myqcloud.com/cover/985/860985/t6_860985.jpg\",\n                \"version\": 1501102426,\n                \"format\": \"epub\",\n                \"type\": 0,\n                \"price\": 69,\n                \"originalPrice\": 0,\n                \"soldout\": 0,\n                \"bookStatus\": 1,\n                \"payingStatus\": 2,\n                \"payType\": 1048577,\n                \"centPrice\": 6900,\n                \"categories\": [\n                    {\n                        \"categoryId\": 100000,\n                        \"subCategoryId\": 100001,\n                        \"categoryType\": 0,\n                        \"title\": \"精品小说-社会小说\"\n                    },\n                    {\n                        \"categoryId\": 300000,\n                        \"subCategoryId\": 300004,\n                        \"categoryType\": 0,\n                        \"title\": \"文学-经典作品\"\n                    }\n                ],\n                \"hasLecture\": 1,\n                \"finished\": 1,\n                \"maxFreeChapter\": 9,\n                \"maxFreeInfo\": {\n                    \"maxFreeChapterIdx\": 9,\n                    \"maxFreeChapterUid\": 22,\n                    \"maxFreeChapterRatio\": 33\n                },\n                \"free\": 0,\n                \"mcardDiscount\": 0,\n                \"ispub\": 1,\n                \"extra_type\": 5,\n                \"cpid\": 25523719,\n                \"publishTime\": \"2015-01-01 00:00:00\",\n                \"lastChapterIdx\": 16,\n                \"paperBook\": {\n                    \"skuId\": \"\"\n                },\n                \"copyrightChapterUids\": [\n                    15\n                ],\n                \"inStoreBookId\": \"\",\n                \"blockSaveImg\": 0,\n                \"language\": \"zh-CN\",\n                \"isTraditionalChinese\": false,\n                \"hideUpdateTime\": false,\n                \"isEPUBComics\": 0,\n                \"isVerticalLayout\": 0,\n                \"isShowTTS\": 1,\n                \"webBookControl\": 0,\n                \"selfProduceIncentive\": false,\n                \"isAutoDownload\": 1\n            },\n            \"reviewCount\": 6,\n            \"reviewLikeCount\": 2,\n            \"reviewCommentCount\": 0,\n            \"noteCount\": 0,\n            \"bookmarkCount\": 1,\n            \"sort\": 1777120627\n        },\n        ...省略其余书籍}"
+        }
+      ]
+    },
+    {
+      "name": "Get Bookmark List",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "accept": true,
+          "accept-encoding": true,
+          "connection": true,
+          "user-agent": true,
+          "host": true
+        }
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/web/book/bookmarklist?bookId={{bookId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "web",
+            "book",
+            "bookmarklist"
+          ],
+          "query": [
+            {
+              "key": "bookId",
+              "value": "{{bookId}}"
+            }
+          ]
+        },
+        "description": "Get highlight/bookmark list for a specific book.\n\n书签、划线"
+      },
+      "response": [
+        {
+          "name": "Get Bookmark List",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/book/bookmarklist?bookId={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "web",
+                "book",
+                "bookmarklist"
+              ],
+              "query": [
+                {
+                  "key": "bookId",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "date",
+              "value": "Sun, 26 Apr 2026 09:16:18 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "x-powered-by",
+              "value": "Express"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "key": "etag",
+              "value": "W/\"1b2b-0k5145C1gGFcIfLBcSMtB5vNlPM\""
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"synckey\": 1777193182,\n    \"updated\": [\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 661493776,\n            \"chapterName\": \"从“全能主妇”到“职场妈妈”：寻找电视剧中的女性劳动者\",\n            \"chapterUid\": 30,\n            \"colorStyle\": 0,\n            \"markText\": \"希定　电视剧中也不是只有女性非正式员工吧？\\n\\n水景　对，2014年播出的电视剧《未生》[插图]中就出现了女性正式员工。\\n\\n希定　啊，我看过《未生》。\\n\\n水景　那可太好啦。《未生》以围棋为喻体，展示了公司这个小社会中劳动者的日常生活与人际关系。主角张克莱只有高中学历，围棋曾是他生活的全部，在没能成为职业棋士后，他入职大企业One International，首次成为职场人的他遭遇了前所未有的挑战。\\n\\n允玉　这部剧应该也刻画了女性劳动者的境遇吧。我记得其中有句名台词：“你是来散发脂粉味的吗？”\",\n            \"range\": \"8969\",\n            \"style\": 0,\n            \"type\": 0,\n            \"createTime\": 1777011879,\n            \"bookmarkId\": \"3300152511_30_8969\",\n            \"chapterIdx\": 15\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 661493776,\n            \"chapterName\": \"是女战士，也是母系族长：名为“金淑”的现象\",\n            \"chapterUid\": 28,\n            \"colorStyle\": 3,\n            \"contextAbstract\": \"\",\n            \"markText\": \"一般来说，在哪里都可以发笑的人，是拥有权力的人；其他人则不能随意笑，或需要看人眼色勉强笑。这种束缚在女性身上好像更强一些。\",\n            \"range\": \"8963-9024\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1776919413,\n            \"bookmarkId\": \"3300152511_28_8963-9024\",\n            \"chapterIdx\": 12\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 661493776,\n            \"chapterName\": \"是女战士，也是母系族长：名为“金淑”的现象\",\n            \"chapterUid\": 28,\n            \"colorStyle\": 1,\n            \"contextAbstract\": \"\",\n            \"markText\": \"我最喜欢“女人的笑声能穿透墙壁，那才是幸福”这句。\",\n            \"range\": \"8500-8525\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1776919305,\n            \"bookmarkId\": \"3300152511_28_8500-8525\",\n            \"chapterIdx\": 12\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 830035158,\n            \"chapterName\": \"男人连呼吸都能做成综艺：韩男娱乐\",\n            \"chapterUid\": 25,\n            \"colorStyle\": 1,\n            \"contextAbstract\": \"\",\n            \"markText\": \"女性几乎走在荆棘之路上，男性却做什么都容易获得掌声\",\n            \"range\": \"11135-11160\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1770876613,\n            \"bookmarkId\": \"3300152511_25_11135-11160\",\n            \"chapterIdx\": 9\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 830035158,\n            \"chapterName\": \"男人连呼吸都能做成综艺：韩男娱乐\",\n            \"chapterUid\": 25,\n            \"colorStyle\": 3,\n            \"contextAbstract\": \"\",\n            \"markText\": \"虽说“搞笑只是搞笑”，但在一种文化体系中感受到什么是有趣的，什么是悲伤的，其实是一种习惯。所谓“笑点”，是一种文化性的创造，比如“肥胖且丑陋的女人做什么事情时很搞笑”，就是在极度的偏见中搞笑，这里的“笑”从来并不单纯只是“笑”\",\n            \"range\": \"6665-6778\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1770770777,\n            \"bookmarkId\": \"3300152511_25_6665-6778\",\n            \"chapterIdx\": 9\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 830035158,\n            \"chapterName\": \"男人连呼吸都能做成综艺：韩男娱乐\",\n            \"chapterUid\": 25,\n            \"colorStyle\": 4,\n            \"contextAbstract\": \"\",\n            \"markText\": \"这些综艺节目并没有反映现实家庭的真实情况。我们这个时代的家庭看起来几乎已濒临解体，为什么综艺中反而要进行这种落后于时代的刻画呢？希定　你的疑问似乎正触及了问题的核心。当社会安全网崩塌，人们只能各自谋生时，他们需要一个可以解决这些问题的共同体，而在韩国社会的想象中，实现这个共同体想象的只有家庭这一种形式，而且还是那种以异性恋为中心、以婚姻契约为基础的核心家庭的形象，如果不把女性塞进这个关系网中，就无法进行想象。\",\n            \"range\": \"7944-8205\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1770466854,\n            \"bookmarkId\": \"3300152511_25_7944-8205\",\n            \"chapterIdx\": 9\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"bookVersion\": 830035158,\n            \"chapterName\": \"男人连呼吸都能做成综艺：韩男娱乐\",\n            \"chapterUid\": 25,\n            \"colorStyle\": 4,\n            \"contextAbstract\": \"\",\n            \"markText\": \"韩男娱乐大致可以总结为两大类型。第一种是完全排除女性的综艺，第二种是即便出现了女性，节目也有很强厌女性，或贬低女性、加深对女性负面偏见的综艺。这样来看，《真正男子汉》[插图]这样的综艺节目可以说两种性质都具备。节目初期完全没有女性，后来从“女军篇”开始邀请了女性出演，但以折磨她们为乐，同时将女性对象化（objectify），把女性分为“样板女”[插图]和没有达到“样板”标准的女性，而这也为观众随意辱骂后者提供了机会。\",\n            \"range\": \"4701-5139\",\n            \"style\": 2,\n            \"type\": 1,\n            \"createTime\": 1770461730,\n            \"bookmarkId\": \"3300152511_25_4701-5139\",\n            \"chapterIdx\": 9\n        }\n    ],\n    \"removed\": [],\n    \"chapters\": [\n        {\n            \"bookId\": \"3300152511\",\n            \"chapterUid\": 28,\n            \"chapterIdx\": 12,\n            \"title\": \"是女战士，也是母系族长：名为“金淑”的现象\"\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"chapterUid\": 30,\n            \"chapterIdx\": 15,\n            \"title\": \"从“全能主妇”到“职场妈妈”：寻找电视剧中的女性劳动者\"\n        },\n        {\n            \"bookId\": \"3300152511\",\n            \"chapterUid\": 25,\n            \"chapterIdx\": 9,\n            \"title\": \"男人连呼吸都能做成综艺：韩男娱乐\"\n        }\n    ],\n    \"book\": {\n        \"bookId\": \"3300152511\",\n        \"version\": 661493776,\n        \"format\": \"epub\",\n        \"soldout\": 0,\n        \"bookStatus\": 1,\n        \"cover\": \"https://cdn.weread.qq.com/weread/cover/75/cpplatform_rhqgsydbyhmwy7eqa7wg9d/s_cpplatform_rhqgsydbyhmwy7eqa7wg9d1752139563.jpg\",\n        \"title\": \"大众文化的女性主义指南\",\n        \"author\": \"[韩]孙希定 [韩]林允玉 [韩]金智惠 编 [韩]崔至恩 等著\",\n        \"coverBoxInfo\": {\n            \"blurhash\": \"KRBoatW;M_}^bHsC=#bGxb\",\n            \"colors\": [\n                {\n                    \"key\": \"1/4\",\n                    \"hex\": \"#301029\"\n                },\n                {\n                    \"key\": \"1/6\",\n                    \"hex\": \"#36082e\"\n                },\n                {\n                    \"key\": \"1/8\",\n                    \"hex\": \"#3d0033\"\n                },\n                {\n                    \"key\": \"2/4\",\n                    \"hex\": \"#47263a\"\n                },\n                {\n                    \"key\": \"2/6\",\n                    \"hex\": \"#4f203e\"\n                },\n                {\n                    \"key\": \"2/8\",\n                    \"hex\": \"#581543\"\n                },\n                {\n                    \"key\": \"3/4\",\n                    \"hex\": \"#623b50\"\n                },\n                {\n                    \"key\": \"3/6\",\n                    \"hex\": \"#6c3453\"\n                },\n                {\n                    \"key\": \"3/8\",\n                    \"hex\": \"#762b58\"\n                },\n                {\n                    \"key\": \"3/12\",\n                    \"hex\": \"#890760\"\n                },\n                {\n                    \"key\": \"4/6\",\n                    \"hex\": \"#864e6a\"\n                },\n                {\n                    \"key\": \"4/10\",\n                    \"hex\": \"#9a3f71\"\n                },\n                {\n                    \"key\": \"4/4\",\n                    \"hex\": \"#7a5567\"\n                },\n                {\n                    \"key\": \"5/10\",\n                    \"hex\": \"#b65a89\"\n                },\n                {\n                    \"key\": \"5/4\",\n                    \"hex\": \"#936f7f\"\n                },\n                {\n                    \"key\": \"5/8\",\n                    \"hex\": \"#ac6286\"\n                },\n                {\n                    \"key\": \"6/4\",\n                    \"hex\": \"#ad8a98\"\n                },\n                {\n                    \"key\": \"6/6\",\n                    \"hex\": \"#ba839b\"\n                },\n                {\n                    \"key\": \"6/8\",\n                    \"hex\": \"#c67d9e\"\n                },\n                {\n                    \"key\": \"6/12\",\n                    \"hex\": \"#dc6ea4\"\n                },\n                {\n                    \"key\": \"7/8\",\n                    \"hex\": \"#e297b7\"\n                },\n                {\n                    \"key\": \"7/10\",\n                    \"hex\": \"#ee90ba\"\n                },\n                {\n                    \"key\": \"7/12\",\n                    \"hex\": \"#fb88be\"\n                },\n                {\n                    \"key\": \"8/4\",\n                    \"hex\": \"#e1bfcb\"\n                },\n                {\n                    \"key\": \"8/6\",\n                    \"hex\": \"#f1b8ce\"\n                },\n                {\n                    \"key\": \"8/12\",\n                    \"hex\": \"#ffa0d8\"\n                },\n                {\n                    \"key\": \"9/2\",\n                    \"hex\": \"#ede0e4\"\n                },\n                {\n                    \"key\": \"9/12\",\n                    \"hex\": \"#ffb8f4\"\n                },\n                {\n                    \"key\": \"1/100\",\n                    \"hex\": \"#c67d9e\"\n                },\n                {\n                    \"key\": \"2/100\",\n                    \"hex\": \"#e297b7\"\n                },\n                {\n                    \"key\": \"3/100\",\n                    \"hex\": \"#ffffff\"\n                },\n                {\n                    \"key\": \"4/100\",\n                    \"hex\": \"#F3E5F0\"\n                },\n                {\n                    \"key\": \"5/100\",\n                    \"hex\": \"#F3E5F0\"\n                },\n                {\n                    \"key\": \"6/100\",\n                    \"hex\": \"#27001C\"\n                }\n            ],\n            \"dominate_color\": {\n                \"hex\": \"#d966a0\",\n                \"hsv\": [\n                    329.90794442655994,\n                    53.16854103343465,\n                    85.28700607902735\n                ]\n            },\n            \"custom_cover\": \"https://weread-1258476243.file.myqcloud.com/bookalphacover/511/3300152511/s_3300152511.jpg\",\n            \"custom_rec_cover\": \"https://weread-1258476243.file.myqcloud.com/bookreccover/511/3300152511/s_3300152511.jpg\",\n            \"colorsPure\": [\n                \"#dc6ea4\",\n                \"#fb88be\"\n            ]\n        }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Review List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/web/review/list?bookId={{bookId}}&listType=11&mine=1&synckey=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "web",
+            "review",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "bookId",
+              "value": "{{bookId}}"
+            },
+            {
+              "key": "listType",
+              "value": "11"
+            },
+            {
+              "key": "mine",
+              "value": "1"
+            },
+            {
+              "key": "synckey",
+              "value": "0"
+            }
+          ]
+        },
+        "description": "Get user's reviews/thoughts for the book.\n\n书评、想法"
+      },
+      "response": [
+        {
+          "name": "Get Review List",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/review/list?bookId={{bookId}}&listType=11&mine=1&synckey=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "web",
+                "review",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "bookId",
+                  "value": "{{bookId}}"
+                },
+                {
+                  "key": "listType",
+                  "value": "11"
+                },
+                {
+                  "key": "mine",
+                  "value": "1"
+                },
+                {
+                  "key": "synckey",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "date",
+              "value": "Sun, 26 Apr 2026 09:17:09 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "x-powered-by",
+              "value": "Express"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "key": "etag",
+              "value": "W/\"6f0-jDW3WuzoLY1raRIw8zogVThyOD0\""
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"synckey\": 1776733998,\n    \"totalCount\": 1,\n    \"reviews\": [\n        {\n            \"reviewId\": \"421427836_88woHsfpx\",\n            \"review\": {\n                \"abstract\": \"《隧道》里的父亲一直在对女儿唠叨“晚上锁好门”“饭要记得吃”这些韩国电视剧中男人最常对女友说的话。\",\n                \"atUserVids\": [],\n                \"bookId\": \"3300152511\",\n                \"bookVersion\": 661493776,\n                \"chapterName\": \"“女儿奴”时代的厌女\",\n                \"chapterUid\": 27,\n                \"content\": \"要是我爸给我说这些我会很愤怒，无名之火就上来了\",\n                \"contextAbstract\": \"\",\n                \"friendship\": 0,\n                \"htmlContent\": \"\",\n                \"isPrivate\": 0,\n                \"notVisibleToFriends\": 0,\n                \"onlyVisibleOneBook\": 1,\n                \"range\": \"7576-7625\",\n                \"createTime\": 1776733998,\n                \"title\": \"\",\n                \"type\": 1,\n                \"chapterIdx\": 11,\n                \"reviewId\": \"421427836_88woHsfpx\",\n                \"userVid\": 421427836,\n                \"topics\": [],\n                \"flag\": 1073741824,\n                \"isLike\": 0,\n                \"isReposted\": 0,\n                \"book\": {\n                    \"bookId\": \"3300152511\",\n                    \"format\": \"epub\",\n                    \"version\": 661493776,\n                    \"soldout\": 0,\n                    \"bookStatus\": 1,\n                    \"type\": 0,\n                    \"cover\": \"https://cdn.weread.qq.com/weread/cover/75/cpplatform_rhqgsydbyhmwy7eqa7wg9d/s_cpplatform_rhqgsydbyhmwy7eqa7wg9d1752139563.jpg\",\n                    \"title\": \"大众文化的女性主义指南\",\n                    \"author\": \"[韩]孙希定 [韩]林允玉 [韩]金智惠 编 [韩]崔至恩 等著\",\n                    \"translator\": \"田禾子\",\n                    \"payType\": 1048577\n                },\n                \"chapterTitle\": \"“女儿奴”时代的厌女\",\n                \"author\": {\n                    \"userVid\": 421427836,\n                    \"name\": \"飞鸿踏雪泥\",\n                    \"avatar\": \"https://thirdwx.qlogo.cn/mmopen/vi_32/kXx0GOWicLljgVNACsVTibFrx7tpZo4gStF1a6evqhcX44GUZd4NtpuOn9qIQIR2MJcMibAicNwSBPSsYPbicnC4ibCFKY98ic5P3IibE3r1rzqhtu8/132\",\n                    \"isFollowing\": 1,\n                    \"isFollower\": 1,\n                    \"isBlacking\": 0,\n                    \"isBlackBy\": 0,\n                    \"isHide\": 0,\n                    \"isV\": 0,\n                    \"roleTags\": [],\n                    \"followPromote\": \"\",\n                    \"isDeepV\": true,\n                    \"deepVTitle\": \"资深会员\",\n                    \"signature\": \"\",\n                    \"medalInfo\": {\n                        \"id\": \"M2-0-1000\",\n                        \"desc\": \"阅读时长\",\n                        \"title\": \"阅读时长\",\n                        \"levelIndex\": 1000\n                    }\n                }\n            }\n        }\n    ],\n    \"removed\": [],\n    \"atUsers\": [],\n    \"refUsers\": [],\n    \"columns\": [],\n    \"hasMore\": 0\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Chapter Infos",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true,
+          "content-length": true,
+          "host": true,
+          "user-agent": true,
+          "accept-encoding": true,
+          "accept": true,
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookIds\": [\"{{bookId}}\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/web/book/chapterInfos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "web",
+            "book",
+            "chapterInfos"
+          ]
+        },
+        "description": "Get chapter structure for a specific book."
+      },
+      "response": [
+        {
+          "name": "Get Chapter Infos",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookIds\": [\"{{bookId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/web/book/chapterInfos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "web",
+                "book",
+                "chapterInfos"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "date",
+              "value": "Sun, 26 Apr 2026 09:15:31 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "x-powered-by",
+              "value": "Express"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "key": "etag",
+              "value": "W/\"1942-2H/d5wx93J3+7BJ+c8eVFI9X4zo\""
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"data\": [\n        {\n            \"bookId\": \"3300152511\",\n            \"soldOut\": 0,\n            \"clearAll\": 0,\n            \"chapterUpdateTime\": 1773799866,\n            \"updated\": [\n                {\n                    \"chapterUid\": 1,\n                    \"chapterIdx\": 1,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_1\",\n                    \"title\": \"封面\",\n                    \"wordCount\": 1,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/cover.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 22,\n                    \"chapterIdx\": 2,\n                    \"updateTime\": 1752734148,\n                    \"readAhead\": 0,\n                    \"tar\": \"\",\n                    \"title\": \"版权信息\",\n                    \"wordCount\": 774,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/copyright.xhtml\",\n                        \"Text/copyright_0001.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 3,\n                    \"chapterIdx\": 3,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_3\",\n                    \"title\": \"文前\",\n                    \"wordCount\": 60,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Preface1.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 4,\n                    \"chapterIdx\": 4,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"\",\n                    \"title\": \"大众文化的女性主义指南\",\n                    \"wordCount\": 56,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Preface2.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 5,\n                    \"chapterIdx\": 5,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_5\",\n                    \"title\": \"引言\",\n                    \"wordCount\": 103,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Preface3.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 23,\n                    \"chapterIdx\": 6,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_6\",\n                    \"title\": \"作者简介\",\n                    \"wordCount\": 641,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Preface4.xhtml\",\n                        \"Text/Preface5.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 24,\n                    \"chapterIdx\": 7,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_7\",\n                    \"title\": \"序言\",\n                    \"wordCount\": 2994,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Preface6.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 8,\n                    \"chapterIdx\": 8,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_8\",\n                    \"title\": \"Ⅰ 男性泛滥、女性消失的世界\",\n                    \"wordCount\": 14,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Section0001.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 25,\n                    \"chapterIdx\": 9,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_9\",\n                    \"title\": \"男人连呼吸都能做成综艺：韩男娱乐\",\n                    \"wordCount\": 9777,\n                    \"price\": 0,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0001_0001.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 26,\n                    \"chapterIdx\": 10,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_10\",\n                    \"title\": \"“浪漫化”的叔和“都市恶女传说”：大叔娱乐\",\n                    \"wordCount\": 8991,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0001_0002.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 27,\n                    \"chapterIdx\": 11,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_11\",\n                    \"title\": \"“女儿奴”时代的厌女\",\n                    \"wordCount\": 9946,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0001_0003.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 28,\n                    \"chapterIdx\": 12,\n                    \"updateTime\": 1773799866,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_12\",\n                    \"title\": \"是女战士，也是母系族长：名为“金淑”的现象\",\n                    \"wordCount\": 7745,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0001_0004.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 13,\n                    \"chapterIdx\": 13,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_13\",\n                    \"title\": \"Ⅱ 女性如何工作，如何成为商品\",\n                    \"wordCount\": 15,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Section0002.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 29,\n                    \"chapterIdx\": 14,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_14\",\n                    \"title\": \"“热情劳动”与“死亡劳动”的极限职业：女子偶像组合\",\n                    \"wordCount\": 12183,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0002_0001.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 30,\n                    \"chapterIdx\": 15,\n                    \"updateTime\": 1772159734,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_15\",\n                    \"title\": \"从“全能主妇”到“职场妈妈”：寻找电视剧中的女性劳动者\",\n                    \"wordCount\": 12523,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0002_0002.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 31,\n                    \"chapterIdx\": 16,\n                    \"updateTime\": 1766110672,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_16\",\n                    \"title\": \"女革命家与女工文学：能决定人生是喜剧还是悲剧的，只有女性自己\",\n                    \"wordCount\": 14282,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0002_0003.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 32,\n                    \"chapterIdx\": 17,\n                    \"updateTime\": 1772531434,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_17\",\n                    \"title\": \"当她的身体成为商品：色情产业、整形贷款与女性贫困\",\n                    \"wordCount\": 10509,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0002_0004.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 18,\n                    \"chapterIdx\": 18,\n                    \"updateTime\": 1752139571,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_18\",\n                    \"title\": \"Ⅲ 再现与被再现的女性\",\n                    \"wordCount\": 11,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 1,\n                    \"files\": [\n                        \"Text/Section0003.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 33,\n                    \"chapterIdx\": 19,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_19\",\n                    \"title\": \"“厉害的姐姐们”：从女性主义的象征，到被策划的超级英雄\",\n                    \"wordCount\": 9922,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0003_0001.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 34,\n                    \"chapterIdx\": 20,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_20\",\n                    \"title\": \"韩影中“消失的母亲”与“复仇的女人”：《小姐》和《没有秘密》是女性电影吗？\",\n                    \"wordCount\": 10989,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0003_0002.xhtml\"\n                    ]\n                },\n                {\n                    \"chapterUid\": 35,\n                    \"chapterIdx\": 21,\n                    \"updateTime\": 1752484088,\n                    \"readAhead\": 0,\n                    \"tar\": \"https://res.weread.qq.com/wrco/tar_CB_3300152511_21\",\n                    \"title\": \"游戏、网络色情与互联网“男性特质”\",\n                    \"wordCount\": 11466,\n                    \"price\": -1,\n                    \"paid\": 0,\n                    \"isMPChapter\": 0,\n                    \"level\": 2,\n                    \"files\": [\n                        \"Text/Section0003_0003.xhtml\"\n                    ]\n                }\n            ],\n            \"removed\": [],\n            \"synckey\": 661493776,\n            \"copyRightSynckey\": 1,\n            \"book\": {\n                \"bookId\": \"3300152511\",\n                \"version\": 661493776,\n                \"format\": \"epub\",\n                \"cover\": \"https://cdn.weread.qq.com/weread/cover/75/cpplatform_rhqgsydbyhmwy7eqa7wg9d/s_cpplatform_rhqgsydbyhmwy7eqa7wg9d1752139563.jpg\",\n                \"title\": \"大众文化的女性主义指南\",\n                \"author\": \"[韩]孙希定 [韩]林允玉 [韩]金智惠 编 [韩]崔至恩 等著\",\n                \"price\": 48,\n                \"type\": 0\n            }\n        }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Book Progress",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/web/book/getProgress?bookId={{bookId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "web",
+            "book",
+            "getProgress"
+          ],
+          "query": [
+            {
+              "key": "bookId",
+              "value": "{{bookId}}"
+            }
+          ]
+        },
+        "description": "Get reading progress and reading time."
+      },
+      "response": [
+        {
+          "name": "Get Book Progress",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/book/getProgress?bookId={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "web",
+                "book",
+                "getProgress"
+              ],
+              "query": [
+                {
+                  "key": "bookId",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Sun, 26 Apr 2026 08:50:47 GMT"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "712"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"2c8-HHhDHJhdh97Ur/hsCd/swOEGzNM\""
+            },
+            {
+              "key": "Vary",
+              "value": "Accept-Encoding"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"bookId\": \"3300152511\",\n    \"book\": {\n        \"appId\": \"wb182564874663h1879029925\",\n        \"bookVersion\": 661493776,\n        \"reviewId\": \"\",\n        \"chapterUid\": 28,\n        \"chapterOffset\": 8395,\n        \"chapterIdx\": 12,\n        \"updateTime\": 1777193424,\n        \"synckey\": 868167326,\n        \"summary\": \"气高到什么程度呢，三八国际劳动妇女节那天\",\n        \"repairOffsetTime\": 0,\n        \"readingTime\": 13924,\n        \"progress\": 50,\n        \"isStartReading\": 1,\n        \"ttsTime\": 12,\n        \"startReadingTime\": 1770347891,\n        \"installId\": \"3160933251054949291883413432\",\n        \"recordReadingTime\": 0\n    },\n    \"tts\": {\n        \"appId\": \"35578332381086014860711519310745954491\",\n        \"bookVersion\": 661493776,\n        \"chapterIdx\": -2,\n        \"chapterOffset\": 12808,\n        \"chapterUid\": 27,\n        \"localPage\": -1,\n        \"pageOffset\": 0,\n        \"summary\": \"\",\n        \"updateTime\": 1776737486,\n        \"type\": \"tts\"\n    },\n    \"canFreeRead\": 0,\n    \"timestamp\": 1777193447\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Book Info",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "accept-encoding": true,
+          "accept": true,
+          "user-agent": true,
+          "host": true,
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "User-Agent",
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Encoding",
+            "value": "gzip, deflate",
+            "type": "text"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "zh-CN,zh;q=0.9,en;q=0.8",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/plain, */*",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{cookie}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/web/book/info?bookId={{bookId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "web",
+            "book",
+            "info"
+          ],
+          "query": [
+            {
+              "key": "bookId",
+              "value": "{{bookId}}"
+            }
+          ]
+        },
+        "description": "Get book metadata such as category, isbn, intro, rating."
+      },
+      "response": [
+        {
+          "name": "Get Book Info",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "zh-CN,zh;q=0.9,en;q=0.8",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/plain, */*",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{cookie}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/web/book/info?bookId={{bookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "web",
+                "book",
+                "info"
+              ],
+              "query": [
+                {
+                  "key": "bookId",
+                  "value": "{{bookId}}"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": ":status",
+              "value": 200
+            },
+            {
+              "key": "date",
+              "value": "Sun, 26 Apr 2026 09:14:40 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "server",
+              "value": "nginx/1.16.1"
+            },
+            {
+              "key": "x-powered-by",
+              "value": "Express"
+            },
+            {
+              "key": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "key": "etag",
+              "value": "W/\"1750-ir3Of4jbViPBWbL06ZFRnFBWvlA\""
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"bookId\": \"3300152511\",\n    \"title\": \"大众文化的女性主义指南\",\n    \"author\": \"[韩]孙希定 [韩]林允玉 [韩]金智惠 编 [韩]崔至恩 等著\",\n    \"translator\": \"田禾子\",\n    \"cover\": \"https://cdn.weread.qq.com/weread/cover/75/cpplatform_rhqgsydbyhmwy7eqa7wg9d/t6_cpplatform_rhqgsydbyhmwy7eqa7wg9d1752139563.jpg\",\n    \"version\": 661493776,\n    \"format\": \"epub\",\n    \"type\": 0,\n    \"price\": 48,\n    \"originalPrice\": 0,\n    \"soldout\": 0,\n    \"bookStatus\": 1,\n    \"payingStatus\": 2,\n    \"payType\": 1048577,\n    \"intro\": \"“我们坚信，‘更多的声音’永远是通向全新世界的路径。”\\n2015 年，由韩国女性劳动者会策划并创作了一档女性主义播客“乙们的驴耳”，后邀请女性主义理\\n论研究学者、作家孙希定作为播客主播。本书精选该播客节目的热门内容“大众文化与性别”集结成书，在韩国正式出版后迅速引发关注，并成为当年图书网站的年度非虚构作品之一。\\n本书以“娱乐解剖”作为方法，彻底拆解“韩娱”奇观背后的“厌女”病灶，开出犀利的体检报告和解毒指南，每一句都是炮轰父权制大众文化的粉红炸弹。同时，本书也是一份从性别视角出发的当代娱乐文化警世录，更是对其他可能性的期待与召唤：在对文化工业的审慎观看与批判性思考中，新的视角，新的叙事，终将到来。\",\n    \"centPrice\": 4800,\n    \"category\": \"社会文化-社科\",\n    \"categories\": [\n        {\n            \"categoryId\": 900000,\n            \"subCategoryId\": 900002,\n            \"categoryType\": 0,\n            \"title\": \"社会文化-社科\"\n        }\n    ],\n    \"hasLecture\": 0,\n    \"finished\": 1,\n    \"maxFreeChapter\": 9,\n    \"maxFreeInfo\": {\n        \"maxFreeChapterIdx\": 9,\n        \"maxFreeChapterUid\": 25,\n        \"maxFreeChapterRatio\": 78\n    },\n    \"free\": 0,\n    \"mcardDiscount\": 0,\n    \"ispub\": 1,\n    \"extra_type\": 5,\n    \"cpid\": 1000000190,\n    \"publishTime\": \"2025-07-21 00:00:00\",\n    \"lastChapterIdx\": 21,\n    \"paperBook\": {\n        \"skuId\": \"\"\n    },\n    \"copyrightChapterUids\": [\n        22\n    ],\n    \"hasKeyPoint\": true,\n    \"inStoreBookId\": \"\",\n    \"blockSaveImg\": 0,\n    \"language\": \"zh-wr\",\n    \"isTraditionalChinese\": false,\n    \"hideUpdateTime\": false,\n    \"isEPUBComics\": 0,\n    \"isVerticalLayout\": 0,\n    \"isShowTTS\": 1,\n    \"webBookControl\": 0,\n    \"selfProduceIncentive\": false,\n    \"isAutoDownload\": 1,\n    \"chapterSize\": 21,\n    \"updateTime\": 1773799866,\n    \"onTime\": 1753066800,\n    \"lastChapterCreateTime\": 1752484088,\n    \"unitPrice\": 0,\n    \"marketType\": 0,\n    \"isbn\": \"\",\n    \"publisher\": \"\",\n    \"totalWords\": 123012,\n    \"publishPrice\": 0,\n    \"bookSize\": 542594,\n    \"encodeId\": \"be032d20813aba213g011df1\",\n    \"recommended\": 0,\n    \"lectureRecommended\": 0,\n    \"follow\": 0,\n    \"secret\": 0,\n    \"offline\": 0,\n    \"lectureOffline\": 0,\n    \"finishReading\": 0,\n    \"hideReview\": 2,\n    \"hideFriendMark\": 0,\n    \"blacked\": 0,\n    \"hasSubject\": 0,\n    \"bookplateId\": \"shehuiwenhua\",\n    \"bookplateText\": \"一个喜欢自由而独立阅读的人，是最难被征服的。\",\n    \"isAutoPay\": 0,\n    \"availables\": 0,\n    \"paid\": 1,\n    \"showLectureButton\": 1,\n    \"isHideTTSButton\": 0,\n    \"shouldHideTTS\": 0,\n    \"wxtts\": 1,\n    \"ratingCount\": 1631,\n    \"ratingDetail\": {\n        \"one\": 31,\n        \"two\": 0,\n        \"three\": 95,\n        \"four\": 0,\n        \"five\": 1505,\n        \"recent\": 68\n    },\n    \"newRating\": 888,\n    \"newRatingCount\": 1570,\n    \"deepVRating\": 931,\n    \"showDeepVRatingLabel\": 0,\n    \"newRatingDetail\": {\n        \"good\": 1456,\n        \"fair\": 92,\n        \"poor\": 22,\n        \"recent\": 65,\n        \"deepV\": 859,\n        \"myRating\": \"\",\n        \"title\": \"好评如潮\"\n    },\n    \"ranklist\": {},\n    \"copyrightInfo\": {\n        \"id\": 1000000190,\n        \"name\": \"微信读书出品\",\n        \"userVid\": 438541605,\n        \"role\": 2,\n        \"avatar\": \"https://res.weread.qq.com/wravatar/WV0021-Lwot73JgkLO_EghtiM3Cyd9/0\",\n        \"cpType\": 1\n    },\n    \"authorSeg\": [\n        {\n            \"words\": \"[韩]\",\n            \"highlight\": 0\n        },\n        {\n            \"words\": \"孙希定\",\n            \"highlight\": 1,\n            \"authorId\": \"2404169\"\n        },\n        {\n            \"words\": \" [韩]\",\n            \"highlight\": 0\n        },\n        {\n            \"words\": \"林允玉\",\n            \"highlight\": 1,\n            \"authorId\": \"2404168\"\n        },\n        {\n            \"words\": \" [韩]\",\n            \"highlight\": 0\n        },\n        {\n            \"words\": \"金智惠\",\n            \"highlight\": 1,\n            \"authorId\": \"502047\"\n        },\n        {\n            \"words\": \" 编 [韩]\",\n            \"highlight\": 0\n        },\n        {\n            \"words\": \"崔至恩\",\n            \"highlight\": 1,\n            \"authorId\": \"2333780\"\n        },\n        {\n            \"words\": \" 等著\",\n            \"highlight\": 0\n        }\n    ],\n    \"translatorSeg\": [\n        {\n            \"words\": \"田禾子\",\n            \"highlight\": 1,\n            \"authorId\": \"2303340\"\n        }\n    ],\n    \"coverBoxInfo\": {\n        \"blurhash\": \"KRBoatW;M_}^bHsC=#bGxb\",\n        \"colors\": [\n            {\n                \"key\": \"1/4\",\n                \"hex\": \"#301029\"\n            },\n            {\n                \"key\": \"1/6\",\n                \"hex\": \"#36082e\"\n            },\n            {\n                \"key\": \"1/8\",\n                \"hex\": \"#3d0033\"\n            },\n            {\n                \"key\": \"2/4\",\n                \"hex\": \"#47263a\"\n            },\n            {\n                \"key\": \"2/6\",\n                \"hex\": \"#4f203e\"\n            },\n            {\n                \"key\": \"2/8\",\n                \"hex\": \"#581543\"\n            },\n            {\n                \"key\": \"3/4\",\n                \"hex\": \"#623b50\"\n            },\n            {\n                \"key\": \"3/6\",\n                \"hex\": \"#6c3453\"\n            },\n            {\n                \"key\": \"3/8\",\n                \"hex\": \"#762b58\"\n            },\n            {\n                \"key\": \"3/12\",\n                \"hex\": \"#890760\"\n            },\n            {\n                \"key\": \"4/6\",\n                \"hex\": \"#864e6a\"\n            },\n            {\n                \"key\": \"4/10\",\n                \"hex\": \"#9a3f71\"\n            },\n            {\n                \"key\": \"4/4\",\n                \"hex\": \"#7a5567\"\n            },\n            {\n                \"key\": \"5/10\",\n                \"hex\": \"#b65a89\"\n            },\n            {\n                \"key\": \"5/4\",\n                \"hex\": \"#936f7f\"\n            },\n            {\n                \"key\": \"5/8\",\n                \"hex\": \"#ac6286\"\n            },\n            {\n                \"key\": \"6/4\",\n                \"hex\": \"#ad8a98\"\n            },\n            {\n                \"key\": \"6/6\",\n                \"hex\": \"#ba839b\"\n            },\n            {\n                \"key\": \"6/8\",\n                \"hex\": \"#c67d9e\"\n            },\n            {\n                \"key\": \"6/12\",\n                \"hex\": \"#dc6ea4\"\n            },\n            {\n                \"key\": \"7/8\",\n                \"hex\": \"#e297b7\"\n            },\n            {\n                \"key\": \"7/10\",\n                \"hex\": \"#ee90ba\"\n            },\n            {\n                \"key\": \"7/12\",\n                \"hex\": \"#fb88be\"\n            },\n            {\n                \"key\": \"8/4\",\n                \"hex\": \"#e1bfcb\"\n            },\n            {\n                \"key\": \"8/6\",\n                \"hex\": \"#f1b8ce\"\n            },\n            {\n                \"key\": \"8/12\",\n                \"hex\": \"#ffa0d8\"\n            },\n            {\n                \"key\": \"9/2\",\n                \"hex\": \"#ede0e4\"\n            },\n            {\n                \"key\": \"9/12\",\n                \"hex\": \"#ffb8f4\"\n            },\n            {\n                \"key\": \"1/100\",\n                \"hex\": \"#c67d9e\"\n            },\n            {\n                \"key\": \"2/100\",\n                \"hex\": \"#e297b7\"\n            },\n            {\n                \"key\": \"3/100\",\n                \"hex\": \"#ffffff\"\n            },\n            {\n                \"key\": \"4/100\",\n                \"hex\": \"#F3E5F0\"\n            },\n            {\n                \"key\": \"5/100\",\n                \"hex\": \"#F3E5F0\"\n            },\n            {\n                \"key\": \"6/100\",\n                \"hex\": \"#27001C\"\n            }\n        ],\n        \"dominate_color\": {\n            \"hex\": \"#d966a0\",\n            \"hsv\": [\n                329.90794442655994,\n                53.16854103343465,\n                85.28700607902735\n            ]\n        },\n        \"custom_cover\": \"https://weread-1258476243.file.myqcloud.com/bookalphacover/511/3300152511/s_3300152511.jpg\",\n        \"custom_rec_cover\": \"https://weread-1258476243.file.myqcloud.com/bookreccover/511/3300152511/s_3300152511.jpg\",\n        \"colorsPure\": [\n            \"#dc6ea4\",\n            \"#fb88be\"\n        ]\n    },\n    \"beginningChapterUid\": 24,\n    \"shortTimeRead\": {\n        \"active\": 0\n    },\n    \"askAIBook\": 1,\n    \"aiBookButtonType\": 1,\n    \"latestReviewSecretMode\": 4,\n    \"autoBookRequest\": 0,\n    \"AISummary\": \"本书通过对韩国大众文化的深入分析，揭示了女性在娱乐、职场和社会中的多重边缘化现象。\\n\\n作者以娱乐解剖的方法，炮轰父权制大众文化中的厌女病灶，开出犀利的体检报告和解毒指南。\\n\\n书中从多个角度探讨了女性在韩男娱乐、偶像行业、电视剧以及互联网文化中的处境，分析了女性角色被再现和消费的社会文化意义。\\n\\n通过对女性主义理论的应用，作者不仅批判了现有的性别不平等现象，还提出了对文化工业的审慎观看与批判性思考，期待新的视角和叙事的出现，最终为女性在社会中的发声提供新的可能。\"\n}"
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://weread.qq.com"
+    },
+    {
+      "key": "bookId",
+      "value": "3300152511"
+    },
+    {
+      "key": "cookie",
+      "value": "wr_gid=203794118;wr_fp=314859790;wr_skey=RatmAr7t;wr_vid=421427836;wr_ql=0;wr_rt=web@rdHiZR80EQ_Zs6rAHP__AL;wr_localvid=d6832ca08191e7a7cd68c27;wr_name=%E9%A3%9E%E9%B8%BF%E8%B8%8F%E9%9B%AA%E6%B3%A5;wr_avatar=https%3A%2F%2Fthirdwx.qlogo.cn%2Fmmopen%2Fvi_32%2FkXx0GOWicLljgVNACsVTibFrx7tpZo4gStF1a6evqhcX44GUZd4NtpuOn9qIQIR2MJcMibAicNwSBPSsYPbicnC4ibCFKY98ic5P3IibE3r1rzqhtu8%2F132;wr_gender=2"
+    }
+  ]
+}
