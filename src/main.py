@@ -39,6 +39,7 @@ def cmd_fetch(args):
 
         print(f"[{i+1}/{limit}] 获取 {book.title} 的笔记...")
         try:
+            # TODO 目前当cookie过期时会得到空列表，不会报错提示或自动刷新
             notes = api.get_all_notes(book.book_id)
             loader.save_book_notes(book.book_id, notes)
             print(f"  - 获取 {len(notes)} 条笔记")

@@ -13,7 +13,7 @@ class Note:
     book_id: str
     book_title: str
     book_author: str
-    type: str  # "bookmark" | "review"
+    type: str  # "bookmark" | "highlight" | "review"
     content: str  # markText 或 content
     chapter: str
     create_time: datetime
@@ -63,6 +63,7 @@ class Book:
     categories: list = field(default_factory=list)
     finished: bool = False
     review_count: int = 0
+    note_count: int = 0  # highlight
     bookmark_count: int = 0
 
     def to_dict(self) -> dict:
@@ -73,8 +74,8 @@ class Book:
             "author": self.author,
             "cover": self.cover,
             "categories": self.categories,
-            "finished": self.finished,
             "review_count": self.review_count,
+            "note_count": self.note_count,
             "bookmark_count": self.bookmark_count,
         }
 

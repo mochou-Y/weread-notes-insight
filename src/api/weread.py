@@ -46,14 +46,15 @@ class WereadAPI:
                     cat.get("title", "")
                     for cat in book_info.get("categories", [])
                 ],
-                finished=book_info.get("finished", 0) == 1,
                 review_count=item.get("reviewCount", 0),
+                note_count=item.get("noteCount", 0),
                 bookmark_count=item.get("bookmarkCount", 0),
             )
             books.append(book)
 
         return books
 
+    # TODO 处理cookie过期时自动更新
     def get_bookmarks(self, book_id: str) -> list[Note]:
         """获取某本书的划线列表"""
         url = f"{self.base_url}/web/book/bookmarklist"
@@ -68,12 +69,17 @@ class WereadAPI:
         book_author = book_info.get("author", "")
 
         for item in data.get("updated", []):
+            note_type = ""
+            if item.get("type") == 1:
+                note_type = "highlight"
+            elif item.get("type") == 0:
+                note_type = "bookmark"
             note = Note(
                 id=item.get("bookmarkId", ""),
                 book_id=book_id,
                 book_title=book_title,
                 book_author=book_author,
-                type="bookmark",
+                type=note_type,
                 content=item.get("markText", ""),
                 chapter=item.get("chapterName", ""),
                 create_time=datetime.fromtimestamp(item.get("createTime", 0)),
@@ -83,6 +89,7 @@ class WereadAPI:
 
         return notes
 
+    # TODO cookie过期自动更新
     def get_reviews(self, book_id: str) -> list[Note]:
         """获取某本书的想法列表"""
         url = f"{self.base_url}/web/review/list"
