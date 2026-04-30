@@ -182,15 +182,16 @@ def cmd_status(args):
     print("=" * 50)
     print("数据状态")
     print("=" * 50)
-    print(f"书籍数量: {len(books)}")
-    print(f"笔记总数: {len(all_notes)}")
+    print(f"书籍总数量: {len(books)}")
+    print(f"本地保存笔记总数: {len(all_notes)}")
 
     if all_notes:
         # 统计笔记类型
-        # TODO check
         bookmarks = [n for n in all_notes if n.type == "bookmark"]
+        highlights = [n for n in all_notes if n.type == "highlight"]
         reviews = [n for n in all_notes if n.type == "review"]
-        print(f"  - 划线: {len(bookmarks)}")
+        print(f"  - 书签: {len(bookmarks)}")
+        print(f"  - 划线: {len(highlights)}")
         print(f"  - 想法: {len(reviews)}")
 
         # 时间范围
