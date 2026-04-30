@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(.venv/Scripts/python -m py_compile src/embedding/embedder.py)"
+      "Bash(.venv/Scripts/python -m py_compile src/embedding/embedder.py)",
+      "Bash(.venv/Scripts/pip install *)"
     ]
   }
 }

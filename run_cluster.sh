@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # 微信读书笔记聚类+图谱生成脚本
-# 用法: ./run_cluster.sh [min-cluster-size] [min-samples] [method]
-# 示例: ./run_cluster.sh 3 2 eom
-#       ./run_cluster.sh 5 3 leaf
+# 用法: ./run_cluster.sh [min-cluster-size] [min-samples] [method] [n-components]
+# 示例: ./run_cluster.sh 3 2 eom 15
+#       ./run_cluster.sh 5 3 leaf 20
 #       ./run_cluster.sh
 
 # 设置编码为UTF-8
@@ -14,6 +14,7 @@ export LANG=en_US.UTF-8
 MIN_CLUSTER_SIZE=${1:-3}
 MIN_SAMPLES=${2:-2}
 METHOD=${3:-eom}
+N_COMPONENTS=${4:-15}
 
 # 创建log文件夹
 mkdir -p log
@@ -49,7 +50,7 @@ OUTPUT_FILE="test_graph_${NEXT_INDEX}.html"
 
 echo "========================================" | tee -a "$LOG_FILE"
 echo "时间: $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOG_FILE"
-echo "参数: min_cluster_size=$MIN_CLUSTER_SIZE, min_samples=$MIN_SAMPLES, method=$METHOD" | tee -a "$LOG_FILE"
+echo "参数: min_cluster_size=$MIN_CLUSTER_SIZE, min_samples=$MIN_SAMPLES, method=$METHOD, n_components=$N_COMPONENTS" | tee -a "$LOG_FILE"
 echo "图谱输出: $OUTPUT_FILE" | tee -a "$LOG_FILE"
 echo "========================================" | tee -a "$LOG_FILE"
 
@@ -60,7 +61,8 @@ echo "" | tee -a "$LOG_FILE"
 .venv/Scripts/python -m src.main cluster \
     --min-cluster-size "$MIN_CLUSTER_SIZE" \
     --min-samples "$MIN_SAMPLES" \
-    --method "$METHOD" 2>&1 | tee -a "$LOG_FILE"
+    --method "$METHOD" \
+    --n-components "$N_COMPONENTS" 2>&1 | tee -a "$LOG_FILE"
 
 # 执行图谱生成命令
 echo "" | tee -a "$LOG_FILE"

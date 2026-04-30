@@ -90,6 +90,8 @@ def cmd_cluster(args):
         min_cluster_size=args.min_cluster_size,
         min_samples=args.min_samples,
         cluster_selection_method=args.method,
+        n_components=args.n_components,
+        use_umap=not args.no_umap,
     )
     themes, labels = manager.discover_themes(notes_exclude_bookmarks, embeddings, use_llm=True)
 
@@ -221,7 +223,9 @@ def main():
     cluster_parser = subparsers.add_parser("cluster", help="主题聚类")
     cluster_parser.add_argument("--min-cluster-size", type=int, default=3, help="HDBSCAN min_cluster_size参数")
     cluster_parser.add_argument("--min-samples", type=int, default=2, help="HDBSCAN min_samples参数")
-    cluster_parser.add_argument("--method", type=str, default="leaf", choices=["eom", "leaf"], help="聚类选择方法: eom(粗粒度) 或 leaf(细粒度)")
+    cluster_parser.add_argument("--method", type=str, default="eom", choices=["eom", "leaf"], help="聚类选择方法: eom(粗粒度) 或 leaf(细粒度)")
+    cluster_parser.add_argument("--n-components", type=int, default=15, help="UMAP降维目标维度")
+    cluster_parser.add_argument("--no-umap", action="store_true", help="禁用UMAP降维")
 
     # graph 命令
     graph_parser = subparsers.add_parser("graph", help="生成主题图谱")

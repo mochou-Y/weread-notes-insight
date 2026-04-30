@@ -5,6 +5,7 @@ from typing import Optional
 
 import hdbscan
 import numpy as np
+import umap
 from openai import OpenAI
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -13,20 +14,38 @@ from src.data.models import Note, Theme
 
 
 class ThemeClusterer:
-    """主题聚类器"""
+    """主题聚类器（支持UMAP降维）"""
 
     def __init__(
         self,
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
+        n_components: int = 15,
+        use_umap: bool = True,
     ):
         self.min_cluster_size = min_cluster_size
         self.min_samples = min_samples
         self.cluster_selection_method = cluster_selection_method
+        self.n_components = n_components
+        self.use_umap = use_umap
+
+    def reduce_dimensions(self, embeddings: np.ndarray) -> np.ndarray:
+        """使用UMAP降维"""
+        print(f"UMAP降维: {embeddings.shape[1]} -> {self.n_components}")
+        reducer = umap.UMAP(
+            n_components=self.n_components,
+            metric="cosine",
+            random_state=42,
+        )
+        return reducer.fit_transform(embeddings)
 
     def cluster(self, embeddings: np.ndarray) -> np.ndarray:
         """执行HDBSCAN聚类"""
+        # 先降维
+        if self.use_umap and embeddings.shape[1] > self.n_components:
+            embeddings = self.reduce_dimensions(embeddings)
+
         clusterer = hdbscan.HDBSCAN(
             min_cluster_size=self.min_cluster_size,
             min_samples=self.min_samples,
@@ -115,11 +134,15 @@ class ThemeManager:
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
+        n_components: int = 15,
+        use_umap: bool = True,
     ):
         self.clusterer = ThemeClusterer(
             min_cluster_size=min_cluster_size,
             min_samples=min_samples,
             cluster_selection_method=cluster_selection_method,
+            n_components=n_components,
+            use_umap=use_umap,
         )
         self.labeler = ThemeLabeler()
 
@@ -130,9 +153,9 @@ class ThemeManager:
         use_llm: bool = True,
     ) -> list[Theme]:
         """发现主题"""
-        print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method})...")
+        print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method}, n_components={self.clusterer.n_components})...")
         vector_dim = embeddings.shape[1]
-        print(f"向量维度 {vector_dim}")
+        print(f"原始向量维度: {vector_dim}")
         labels = self.clusterer.cluster(embeddings)
         stats = self.clusterer.get_cluster_stats(labels)
         print(f"发现 {stats['n_clusters']} 个主题，{stats['n_noise']} 个噪声点")
