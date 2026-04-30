@@ -65,7 +65,9 @@ def cmd_cluster(args):
         print("错误: 没有找到笔记数据，请先运行 fetch 命令")
         sys.exit(1)
 
+    notes_exclude_bookmarks = [note for note in notes if note.type != 'bookmark']
     print(f"加载 {len(notes)} 条笔记")
+    print(f"去除书签共 {len(notes_exclude_bookmarks)} 条笔记")
 
     # 生成或加载embedding
     from src.embedding.embedder import Embedder, EmbeddingStorage
@@ -76,7 +78,7 @@ def cmd_cluster(args):
     if embeddings is None:
         print("生成embedding...")
         embedder = Embedder()
-        embeddings = embedder.embed_notes(notes)
+        embeddings = embedder.embed_notes(notes_exclude_bookmarks)
         storage.save(embeddings)
     else:
         print(f"加载已有embedding: {embeddings.shape}")
@@ -85,14 +87,14 @@ def cmd_cluster(args):
     from src.clustering.cluster import ThemeManager
 
     manager = ThemeManager()
-    themes, labels = manager.discover_themes(notes, embeddings)
+    themes, labels = manager.discover_themes(notes_exclude_bookmarks, embeddings)
 
     # 保存聚类结果
     import json
     import numpy as np
 
     result = {
-        "total_notes": len(notes),
+        "total_notes": len(notes_exclude_bookmarks),
         "total_themes": len(themes),
         "themes": [theme.to_dict() for theme in themes],
         "updated_at": datetime.now().isoformat(),

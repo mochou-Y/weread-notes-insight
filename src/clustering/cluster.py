@@ -70,11 +70,11 @@ class ThemeLabeler:
     def label_theme_by_llm(self, notes: list[Note], max_notes: int = 20) -> str:
         """使用LLM生成主题标签"""
         # 取前N条笔记作为样本
-        # TODO 此处取前N条，应该判断选取的笔记是否有代表性
+        # TODO 这里取了前N条，是否需要判断选取的笔记是否有代表性？
         sample_notes = notes[:max_notes]
         contents = [note.content[:200] for note in sample_notes]  # 限制每条长度
 
-        prompt = f"""以下是用户在微信读书中的笔记摘录，请用一个简短的词组（2-4个字）概括这些笔记的共同主题。
+        prompt = f"""以下是用户在微信读书中的笔记摘录，请用一个简短的词组（2-6个字）概括这些笔记的共同主题。
 
 笔记内容：
 {chr(10).join(f'- {c}' for c in contents)}
