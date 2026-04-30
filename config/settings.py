@@ -26,8 +26,8 @@ class Settings:
 
     # LLM配置（OpenAI兼容接口）
     openai_api_key: str = ""
-    openai_base_url: str = "https://api.openai.com/v1"
-    llm_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    llm_model: str = "kimi-k2.5"
 
     # 聚类参数
     hdbscan_min_cluster_size: int = 5
@@ -52,7 +52,7 @@ class Settings:
             embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
             embedding_base_url=os.getenv("EMBEDDING_BASE_URL", "https://api.siliconflow.com/v1"),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-            openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            openai_base_url=os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         )
 
 
