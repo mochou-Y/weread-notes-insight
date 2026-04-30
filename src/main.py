@@ -89,6 +89,7 @@ def cmd_cluster(args):
 
     # 保存聚类结果
     import json
+    import numpy as np
 
     result = {
         "total_notes": len(notes),
@@ -101,7 +102,11 @@ def cmd_cluster(args):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
+    # 保存 labels
+    labels_path = loader.processed_dir / "labels.npy"
+    np.save(labels_path, labels)
     print(f"聚类结果已保存到 {output_path}")
+    print(f"Labels已保存到 {labels_path}")
 
 
 def cmd_graph(args):
@@ -133,6 +138,7 @@ def cmd_graph(args):
     themes = [Theme(**t) for t in themes_data["themes"]]
 
     # 加载embedding和labels
+    import numpy as np
     from src.embedding.embedder import EmbeddingStorage
 
     storage = EmbeddingStorage()
@@ -142,12 +148,14 @@ def cmd_graph(args):
         print("错误: 没有找到embedding数据")
         sys.exit(1)
 
-    # 重新执行聚类获取labels
-    from src.clustering.cluster import ThemeClusterer
+    # 加载已保存的 labels
+    labels_path = loader.processed_dir / "labels.npy"
+    if not labels_path.exists():
+        print("错误: 没有找到labels数据，请先运行 cluster 命令")
+        sys.exit(1)
 
-    # TODO  把之前labels存储下来并检查是否存在，不重新执行聚类
-    clusterer = ThemeClusterer()
-    labels = clusterer.cluster(embeddings)
+    labels = np.load(labels_path)
+    print(f"加载已有labels: {labels.shape}")
 
     # 构建图谱
     from src.graph.visualizer import GraphBuilder, GraphVisualizer

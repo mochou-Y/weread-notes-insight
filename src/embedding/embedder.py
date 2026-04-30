@@ -58,7 +58,6 @@ class Embedder:
         texts = []
         for note in notes:
             # 组合内容和上下文
-            # TODO check
             text = note.content
             if note.context:
                 text = f"{note.context}\n{note.content}"
