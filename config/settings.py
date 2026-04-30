@@ -19,10 +19,14 @@ class Settings:
     weread_base_url: str = "https://weread.qq.com"
     cookie: str = ""  # 从环境变量或配置文件读取
 
-    # OpenAI兼容接口配置
+    # Embedding API配置（SiliconFlow）
+    embedding_api_key: str = ""
+    embedding_base_url: str = "https://api.siliconflow.com/v1"
+    embedding_model: str = "Qwen/Qwen3-Embedding-4B"
+
+    # LLM配置（OpenAI兼容接口）
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
-    embedding_model: str = "text-embedding-3-small"
     llm_model: str = "gpt-4o-mini"
 
     # 聚类参数
@@ -45,6 +49,8 @@ class Settings:
         """从环境变量加载配置"""
         return cls(
             cookie=os.getenv("WEREAD_COOKIE", ""),
+            embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
+            embedding_base_url=os.getenv("EMBEDDING_BASE_URL", "https://api.siliconflow.com/v1"),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         )

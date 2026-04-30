@@ -4,14 +4,14 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from openai import OpenAI
+import requests
 
 from config.settings import settings
 from src.data.models import Note
 
 
 class Embedder:
-    """Embedding生成器"""
+    """Embedding生成器（使用SiliconFlow API）"""
 
     def __init__(
         self,
@@ -19,22 +19,14 @@ class Embedder:
         base_url: Optional[str] = None,
         model: Optional[str] = None,
     ):
-        self.api_key = api_key or settings.openai_api_key
-        self.base_url = base_url or settings.openai_base_url
+        self.api_key = api_key or settings.embedding_api_key or settings.openai_api_key
+        self.base_url = base_url or settings.embedding_base_url
         self.model = model or settings.embedding_model
-
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-        )
 
     def embed_text(self, text: str) -> list[float]:
         """生成单个文本的embedding"""
-        response = self.client.embeddings.create(
-            model=self.model,
-            input=text,
-        )
-        return response.data[0].embedding
+        embeddings = self.embed_texts([text])
+        return embeddings[0]
 
     def embed_texts(self, texts: list[str], batch_size: int = 100) -> list[list[float]]:
         """批量生成embedding"""
@@ -44,11 +36,22 @@ class Embedder:
             batch = texts[i : i + batch_size]
             print(f"  生成embedding: {i+1}-{min(i+batch_size, len(texts))}/{len(texts)}")
 
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=batch,
+            response = requests.post(
+                f"{self.base_url}/embeddings",
+                json={
+                    "model": self.model,
+                    "input": batch,
+                    "dimensions": 512,
+                },
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
             )
-            batch_embeddings = [item.embedding for item in response.data]
+            response.raise_for_status()
+            data = response.json()
+
+            batch_embeddings = [item["embedding"] for item in data["data"]]
             all_embeddings.extend(batch_embeddings)
 
         return all_embeddings
