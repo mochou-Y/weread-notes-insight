@@ -17,19 +17,21 @@ class ThemeClusterer:
 
     def __init__(
         self,
-        min_cluster_size: int = 5,
-        min_samples: int = 3,
+        min_cluster_size: int = 3,
+        min_samples: int = 2,
+        cluster_selection_method: str = "eom",
     ):
         self.min_cluster_size = min_cluster_size
         self.min_samples = min_samples
+        self.cluster_selection_method = cluster_selection_method
 
-    # TODO question 全部的embeddings ok吗？
     def cluster(self, embeddings: np.ndarray) -> np.ndarray:
         """执行HDBSCAN聚类"""
         clusterer = hdbscan.HDBSCAN(
             min_cluster_size=self.min_cluster_size,
             min_samples=self.min_samples,
             metric="euclidean",
+            cluster_selection_method=self.cluster_selection_method,
         )
         labels = clusterer.fit_predict(embeddings)
         return labels
@@ -108,8 +110,17 @@ class ThemeLabeler:
 class ThemeManager:
     """主题管理器"""
 
-    def __init__(self):
-        self.clusterer = ThemeClusterer()
+    def __init__(
+        self,
+        min_cluster_size: int = 3,
+        min_samples: int = 2,
+        cluster_selection_method: str = "eom",
+    ):
+        self.clusterer = ThemeClusterer(
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples,
+            cluster_selection_method=cluster_selection_method,
+        )
         self.labeler = ThemeLabeler()
 
     def discover_themes(
@@ -119,7 +130,9 @@ class ThemeManager:
         use_llm: bool = True,
     ) -> list[Theme]:
         """发现主题"""
-        print("执行聚类...")
+        print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method})...")
+        vector_dim = embeddings.shape[1]
+        print(f"向量维度 {vector_dim}")
         labels = self.clusterer.cluster(embeddings)
         stats = self.clusterer.get_cluster_stats(labels)
         print(f"发现 {stats['n_clusters']} 个主题，{stats['n_noise']} 个噪声点")
