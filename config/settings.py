@@ -27,7 +27,7 @@ class Settings:
     # LLM配置（OpenAI兼容接口）
     openai_api_key: str = ""
     openai_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    llm_model: str = "kimi-k2.5"
+    llm_model: str = "qwen3.5-plus"
 
     # 聚类参数
     hdbscan_min_cluster_size: int = 5
