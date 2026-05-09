@@ -49,6 +49,41 @@ def cmd_fetch(args):
     print("数据采集完成!")
 
 
+def cmd_embedding(args):
+    """生成embedding命令"""
+    print("开始生成embedding...")
+
+    # 检查API配置
+    if not settings.openai_api_key:
+        print("错误: 请设置环境变量 OPENAI_API_KEY")
+        sys.exit(1)
+
+    loader = DataLoader()
+    notes = loader.load_all_notes()
+
+    if not notes:
+        print("错误: 没有找到笔记数据，请先运行 fetch 命令")
+        sys.exit(1)
+
+    notes_exclude_bookmarks = [note for note in notes if note.type != 'bookmark']
+    print(f"加载 {len(notes)} 条笔记")
+    print(f"去除书签共 {len(notes_exclude_bookmarks)} 条笔记")
+
+    # 生成embedding
+    from src.embedding.embedder import Embedder, EmbeddingStorage
+
+    storage = EmbeddingStorage()
+
+    if storage.exists() and not args.force:
+        print("embedding已存在，使用 --force 参数强制重新生成")
+        sys.exit(0)
+
+    embedder = Embedder()
+    embeddings = embedder.embed_notes(notes_exclude_bookmarks)
+    storage.save(embeddings)
+    print("embedding生成完成!")
+
+
 def cmd_cluster(args):
     """主题聚类命令"""
     print("开始主题聚类...")
@@ -69,19 +104,17 @@ def cmd_cluster(args):
     print(f"加载 {len(notes)} 条笔记")
     print(f"去除书签共 {len(notes_exclude_bookmarks)} 条笔记")
 
-    # 生成或加载embedding
-    from src.embedding.embedder import Embedder, EmbeddingStorage
+    # 加载embedding
+    from src.embedding.embedder import EmbeddingStorage
 
     storage = EmbeddingStorage()
     embeddings = storage.load()
 
     if embeddings is None:
-        print("生成embedding...")
-        embedder = Embedder()
-        embeddings = embedder.embed_notes(notes_exclude_bookmarks)
-        storage.save(embeddings)
-    else:
-        print(f"加载已有embedding: {embeddings.shape}")
+        print("错误: 没有找到embedding数据，请先运行 embedding 命令")
+        sys.exit(1)
+
+    print(f"加载已有embedding: {embeddings.shape}")
 
     # 执行聚类
     from src.clustering.cluster import ThemeManager
@@ -219,6 +252,10 @@ def main():
     fetch_parser.add_argument("--limit", type=int, help="限制获取书籍数量")
     fetch_parser.add_argument("--incremental", action="store_true", help="增量更新")
 
+    # embedding 命令
+    embedding_parser = subparsers.add_parser("embedding", help="生成embedding向量")
+    embedding_parser.add_argument("--force", action="store_true", help="强制重新生成")
+
     # cluster 命令
     cluster_parser = subparsers.add_parser("cluster", help="主题聚类")
     cluster_parser.add_argument("--min-cluster-size", type=int, default=3, help="HDBSCAN min_cluster_size参数")
@@ -238,6 +275,8 @@ def main():
 
     if args.command == "fetch":
         cmd_fetch(args)
+    elif args.command == "embedding":
+        cmd_embedding(args)
     elif args.command == "cluster":
         cmd_cluster(args)
     elif args.command == "graph":
