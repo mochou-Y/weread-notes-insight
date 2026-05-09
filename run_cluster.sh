@@ -58,17 +58,40 @@ echo "========================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "[命令1] 执行聚类..." | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
+START_TIME=$(date +%s)
 .venv/Scripts/python -m src.main cluster \
     --min-cluster-size "$MIN_CLUSTER_SIZE" \
     --min-samples "$MIN_SAMPLES" \
     --method "$METHOD" \
     --n-components "$N_COMPONENTS" 2>&1 | tee -a "$LOG_FILE"
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+MINUTES=$((ELAPSED / 60))
+SECONDS=$((ELAPSED % 60))
+echo "" | tee -a "$LOG_FILE"
+if [ $MINUTES -gt 0 ]; then
+    echo "聚类耗时: ${MINUTES}分钟${SECONDS}秒" | tee -a "$LOG_FILE"
+else
+    echo "聚类耗时: ${SECONDS}秒" | tee -a "$LOG_FILE"
+fi
 
 # 执行图谱生成命令
+START_TIME_PHASE_2=$(date +%s)
 echo "" | tee -a "$LOG_FILE"
 echo "[命令2] 生成图谱..." | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 .venv/Scripts/python -m src.main graph --output "$OUTPUT_FILE" 2>&1 | tee -a "$LOG_FILE"
+
+END_TIME_PHASE_2=$(date +%s)
+ELAPSED_PHASE_2=$((END_TIME_PHASE_2 - START_TIME_PHASE_2))
+MINUTES_PHASE_2=$((ELAPSED_PHASE_2 / 60))
+SECONDS_PHASE_2=$((ELAPSED_PHASE_2 % 60))
+echo "" | tee -a "$LOG_FILE"
+if [ $MINUTES_PHASE_2 -gt 0 ]; then
+    echo "生成图谱耗时: ${MINUTES_PHASE_2}分钟${SECONDS_PHASE_2}秒" | tee -a "$LOG_FILE"
+else
+    echo "生成图谱耗时: ${SECONDS_PHASE_2}秒" | tee -a "$LOG_FILE"
+fi
 
 echo "" | tee -a "$LOG_FILE"
 echo "========================================" | tee -a "$LOG_FILE"
