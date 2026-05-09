@@ -1,5 +1,6 @@
 """主题聚类模块"""
 
+import logging
 from collections import Counter
 from typing import Optional
 
@@ -11,6 +12,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from config.settings import settings
 from src.data.models import Note, Theme
+
+logger = logging.getLogger(__name__)
 
 
 class ThemeClusterer:
@@ -172,7 +175,8 @@ class ThemeManager:
             if use_llm:
                 try:
                     label = self.labeler.label_theme_by_llm(cluster_notes)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"LLM标注失败，使用TF-IDF: {e}")
                     label = self.labeler.label_theme_by_tfidf(cluster_notes)
             else:
                 label = self.labeler.label_theme_by_tfidf(cluster_notes)
