@@ -133,28 +133,58 @@ def view_notes(notes, themes, book_map, labels):
     """笔记详情视图"""
     st.header("📝 笔记详情")
 
-    # 主题选择
-    theme_labels = ["全部"] + [t.label for t in themes]
-    selected_theme = st.selectbox("选择主题", theme_labels)
+    # 筛选模式选择
+    filter_mode = st.radio("筛选模式", ["按主题筛选", "按书籍筛选"], horizontal=True)
 
-    if selected_theme == "全部":
-        filtered_notes = notes
-    else:
-        theme = next((t for t in themes if t.label == selected_theme), None)
-        if theme:
-            note_ids = set(theme.note_ids)
-            filtered_notes = [n for n in notes if n.id in note_ids]
+    if filter_mode == "按主题筛选":
+        # 模式1：先选主题，再选书籍
+        theme_labels = ["全部"] + [t.label for t in themes]
+        selected_theme = st.selectbox("选择主题", theme_labels, key="theme_select")
+
+        if selected_theme == "全部":
+            filtered_notes = notes
         else:
-            filtered_notes = []
+            theme = next((t for t in themes if t.label == selected_theme), None)
+            if theme:
+                note_ids = set(theme.note_ids)
+                filtered_notes = [n for n in notes if n.id in note_ids]
+            else:
+                filtered_notes = []
+
+        # 书籍筛选（基于当前主题下的笔记）
+        books_in_theme = sorted(set(n.book_title for n in filtered_notes))
+        selected_book = st.selectbox("筛选书籍", ["全部"] + books_in_theme, key="book_select")
+
+        if selected_book != "全部":
+            filtered_notes = [n for n in filtered_notes if n.book_title == selected_book]
+
+    else:
+        # 模式2：先选书籍，再选主题
+        all_books = sorted(set(n.book_title for n in notes))
+        selected_book = st.selectbox("选择书籍", ["全部"] + all_books, key="book_select2")
+
+        if selected_book == "全部":
+            filtered_notes = notes
+        else:
+            filtered_notes = [n for n in notes if n.book_title == selected_book]
+
+        # 主题筛选（基于当前书籍下的笔记）
+        note_ids_set = set(n.id for n in filtered_notes)
+        themes_with_book = [t for t in themes if any(nid in note_ids_set for nid in t.note_ids)]
+        theme_labels = ["全部"] + [f"{t.label} ({sum(1 for nid in t.note_ids if nid in note_ids_set)}条)" for t in themes_with_book]
+        selected_theme = st.selectbox("筛选主题", theme_labels, key="theme_select2")
+
+        if selected_theme != "全部":
+            # 提取主题名称（去除数量后缀）
+            theme_name = selected_theme.split(" (")[0]
+            theme = next((t for t in themes if t.label == theme_name), None)
+            if theme:
+                note_ids = set(theme.note_ids)
+                filtered_notes = [n for n in filtered_notes if n.id in note_ids]
+            else:
+                filtered_notes = []
 
     st.write(f"共 {len(filtered_notes)} 条笔记")
-
-    # 书籍筛选
-    books_in_theme = list(set(n.book_title for n in filtered_notes))
-    selected_book = st.selectbox("筛选书籍", ["全部"] + books_in_theme)
-
-    if selected_book != "全部":
-        filtered_notes = [n for n in filtered_notes if n.book_title == selected_book]
 
     # 笔记列表
     for note in filtered_notes[:50]:  # 限制显示数量
