@@ -66,9 +66,16 @@ def cmd_embedding(args):
         print("错误: 没有找到笔记数据，请先运行 fetch 命令")
         sys.exit(1)
 
-    notes_exclude_bookmarks = [note for note in notes if note.type != 'bookmark']
+    # 过滤笔记：去除书签、空内容、包含[插图]的笔记
+    filtered_notes = [
+        n for n in notes
+        if n.type != "bookmark"
+        and n.content.strip()  # 过滤空内容
+        and "[插图]" not in n.content  # 过滤内容包含[插图]
+        and "[插图]" not in (n.context or "")  # 过滤context包含[插图]
+    ]
     print(f"加载 {len(notes)} 条笔记")
-    print(f"去除书签共 {len(notes_exclude_bookmarks)} 条笔记")
+    print(f"过滤后共 {len(filtered_notes)} 条笔记，去除书签、空内容、包含[插图]的笔记")
 
     # 生成embedding
     from src.embedding.embedder import Embedder, EmbeddingStorage
@@ -80,7 +87,7 @@ def cmd_embedding(args):
         sys.exit(0)
 
     embedder = Embedder()
-    embeddings = embedder.embed_notes(notes_exclude_bookmarks)
+    embeddings = embedder.embed_notes(filtered_notes)
     storage.save(embeddings)
     print("embedding生成完成!")
 
@@ -101,9 +108,17 @@ def cmd_cluster(args):
         print("错误: 没有找到笔记数据，请先运行 fetch 命令")
         sys.exit(1)
 
-    notes_exclude_bookmarks = [note for note in notes if note.type != 'bookmark']
+    # 过滤笔记：去除书签、空内容、包含[插图]的笔记
+    filtered_notes = [
+        n for n in notes
+        if n.type != "bookmark"
+        and n.content.strip()  # 过滤空内容
+        and "[插图]" not in n.content  # 过滤内容包含[插图]
+        and "[插图]" not in (n.context or "")  # 过滤context包含[插图]
+    ]
     print(f"加载 {len(notes)} 条笔记")
-    print(f"去除书签共 {len(notes_exclude_bookmarks)} 条笔记")
+    print(f"过滤后共 {len(filtered_notes)} 条笔记，去除书签、空内容、包含[插图]的笔记")
+
 
     # 加载embedding
     from src.embedding.embedder import EmbeddingStorage
@@ -127,14 +142,14 @@ def cmd_cluster(args):
         n_components=args.n_components,
         use_umap=not args.no_umap,
     )
-    themes, labels, coords_2d = manager.discover_themes(notes_exclude_bookmarks, embeddings, use_llm=True)
+    themes, labels, coords_2d = manager.discover_themes(filtered_notes, embeddings, use_llm=True)
 
     # 保存聚类结果
     import json
     import numpy as np
 
     result = {
-        "total_notes": len(notes_exclude_bookmarks),
+        "total_notes": len(filtered_notes),
         "total_themes": len(themes),
         "themes": [theme.to_dict() for theme in themes],
         "updated_at": datetime.now().isoformat(),
@@ -164,7 +179,14 @@ def cmd_graph(args):
 
     loader = DataLoader()
     notes = loader.load_all_notes()
-    notes = [note for note in notes if note.type != 'bookmark']
+    # 过滤笔记：去除书签、空内容、包含[插图]的笔记
+    notes = [
+        n for n in notes
+        if n.type != "bookmark"
+        and n.content.strip()  # 过滤空内容
+        and "[插图]" not in n.content  # 过滤内容包含[插图]
+        and "[插图]" not in (n.context or "")  # 过滤context包含[插图]
+    ]
     books = loader.load_notebook()
 
     if not notes:
@@ -242,6 +264,14 @@ def cmd_status(args):
         print(f"  - 书签: {len(bookmarks)}")
         print(f"  - 划线: {len(highlights)}")
         print(f"  - 想法: {len(reviews)}")
+        notes = [
+            n for n in all_notes
+            if n.type != "bookmark"
+            and n.content.strip()  # 过滤空内容
+            and "[插图]" not in n.content  # 过滤内容包含[插图]
+            and "[插图]" not in (n.context or "")  # 过滤context包含[插图]
+        ]
+        print(f"  - 去除书签、空内容、包含[插图]: {len(notes)}")
 
         # 时间范围
         times = [n.create_time for n in all_notes]

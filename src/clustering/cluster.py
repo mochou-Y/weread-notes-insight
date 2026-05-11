@@ -26,7 +26,7 @@ class ThemeClusterer:
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
-        n_components: int = n,
+        n_components: int = 15,
         use_umap: bool = True,
     ):
         self.min_cluster_size = min_cluster_size
@@ -169,7 +169,7 @@ class ThemeManager:
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
-        n_components: int = n,
+        n_components: int = 15,
         use_umap: bool = True,
     ):
         self.clusterer = ThemeClusterer(

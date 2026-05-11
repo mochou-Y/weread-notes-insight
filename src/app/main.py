@@ -25,7 +25,15 @@ def load_data():
 
     # 加载笔记
     all_notes = loader.load_all_notes()
-    notes = [n for n in all_notes if n.type != "bookmark"]
+
+    # 过滤笔记：去除书签、空内容、包含[插图]的笔记
+    notes = [
+        n for n in all_notes
+        if n.type != "bookmark"
+        and n.content.strip()  # 过滤空内容
+        and "[插图]" not in n.content  # 过滤内容包含[插图]
+        and "[插图]" not in (n.context or "")  # 过滤context包含[插图]
+    ]
 
     # 加载书籍
     books = loader.load_notebook()
