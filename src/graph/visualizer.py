@@ -150,7 +150,7 @@ class GraphVisualizer:
         colors = {
             "theme": "#FF6B6B",
             "note": "#4ECDC4",
-            "book": "#45B7D1",
+            "book": "#EA38C1",
         }
 
         # 添加节点
