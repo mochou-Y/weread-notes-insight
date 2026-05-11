@@ -7,10 +7,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 import hdbscan
+import jieba.analyse
 import numpy as np
 import umap
 from openai import OpenAI
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 from config.settings import settings
 from src.data.models import Note, Theme
@@ -116,19 +116,30 @@ class ThemeLabeler:
         return response.choices[0].message.content.strip()
 
     def label_theme_by_tfidf(self, notes: list[Note]) -> str:
-        """使用TF-IDF生成主题标签"""
+        """使用jieba TF-IDF生成主题标签"""
+        # 常见无意义词
+        stop_words = {
+            "一个", "一种", "这个", "那个", "这些", "那些", "什么", "怎么",
+            "如何", "为什么", "因为", "所以", "但是", "然而", "如果", "虽然",
+            "可以", "可能", "应该", "必须", "需要", "能够", "已经", "正在",
+            "我们", "他们", "她们", "它们", "自己", "他人", "大家", "人们",
+            "这样", "那样", "怎样", "多少", "哪里", "那里", "这里", "真的",
+        }
+
         contents = [note.content for note in notes]
+        text = " ".join(contents)
 
-        vectorizer = TfidfVectorizer(max_features=100)
-        tfidf_matrix = vectorizer.fit_transform(contents)
+        # 使用jieba提取关键词，多提取一些以便过滤
+        keywords = jieba.analyse.extract_tags(text, topK=8, withWeight=False)
 
-        # 获取TF-IDF最高的词
-        feature_names = vectorizer.get_feature_names_out()
-        tfidf_scores = tfidf_matrix.sum(axis=0).A1
-        top_indices = tfidf_scores.argsort()[-5:][::-1]
-        top_words = [feature_names[i] for i in top_indices]
+        # 过滤停用词和单字词
+        filtered = [w for w in keywords if w not in stop_words and len(w) > 1]
 
-        return top_words[0] if top_words else "未命名主题"
+        if not filtered:
+            return "未命名主题"
+
+        # 组合前2个关键词作为标签
+        return "/".join(filtered[:2])
 
 
 class ThemeManager:
