@@ -1,7 +1,9 @@
 """主题聚类模块"""
 
 import logging
+import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 import hdbscan
@@ -159,28 +161,56 @@ class ThemeManager:
         print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method}, n_components={self.clusterer.n_components})...")
         vector_dim = embeddings.shape[1]
         print(f"原始向量维度: {vector_dim}")
+        t0 = time.time()
         labels = self.clusterer.cluster(embeddings)
         stats = self.clusterer.get_cluster_stats(labels)
         print(f"发现 {stats['n_clusters']} 个主题，{stats['n_noise']} 个噪声点")
+        elapsed = time.time() - t0
+        m, s = divmod(int(elapsed), 60)
+        print(f"聚类耗时: {f'{m}分钟' if m else ''}{s}秒")
 
         # 按聚类分组笔记
         themes = []
         unique_labels = sorted(set(labels) - {-1})
 
+        # 准备聚类数据
+        cluster_data = {}
         for cluster_id in unique_labels:
             cluster_indices = np.where(labels == cluster_id)[0]
             cluster_notes = [notes[i] for i in cluster_indices]
+            cluster_data[cluster_id] = cluster_notes
 
-            # 生成主题标签
-            if use_llm:
+        # 生成主题标签
+        labels_map = {}
+        t1 = time.time()
+        if use_llm:
+            def label_cluster(cluster_id, cluster_notes):
                 try:
                     label = self.labeler.label_theme_by_llm(cluster_notes)
                 except Exception as e:
                     logger.warning(f"LLM标注失败，使用TF-IDF: {e}")
                     label = self.labeler.label_theme_by_tfidf(cluster_notes)
-            else:
-                label = self.labeler.label_theme_by_tfidf(cluster_notes)
+                return cluster_id, label
 
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {
+                    executor.submit(label_cluster, cid, cnotes): cid
+                    for cid, cnotes in cluster_data.items()
+                }
+                for future in as_completed(futures):
+                    cid, label = future.result()
+                    labels_map[cid] = label
+        else:
+            for cluster_id, cluster_notes in cluster_data.items():
+                labels_map[cluster_id] = self.labeler.label_theme_by_tfidf(cluster_notes)
+
+        elapsed = time.time() - t1
+        m, s = divmod(int(elapsed), 60)
+        print(f"生成标签耗时: {f'{m}分钟' if m else ''}{s}秒")
+
+        for cluster_id in unique_labels:
+            cluster_notes = cluster_data[cluster_id]
+            label = labels_map[cluster_id]
             theme = Theme(
                 id=f"theme_{cluster_id}",
                 label=label,
