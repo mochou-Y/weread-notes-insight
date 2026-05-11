@@ -26,7 +26,7 @@ class ThemeClusterer:
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
-        n_components: int = 15,
+        n_components: int = n,
         use_umap: bool = True,
     ):
         self.min_cluster_size = min_cluster_size
@@ -34,22 +34,41 @@ class ThemeClusterer:
         self.cluster_selection_method = cluster_selection_method
         self.n_components = n_components
         self.use_umap = use_umap
+        self.reducer_nd = None  # n维降维器
+        self.reducer_2d = None  # 2维降维器（用于可视化）
 
     def reduce_dimensions(self, embeddings: np.ndarray) -> np.ndarray:
-        """使用UMAP降维"""
+        """使用UMAP降维到n_components维"""
         print(f"UMAP降维: {embeddings.shape[1]} -> {self.n_components}")
-        reducer = umap.UMAP(
+        self.reducer_nd = umap.UMAP(
             n_components=self.n_components,
             metric="cosine",
             random_state=42,
         )
-        return reducer.fit_transform(embeddings)
+        return self.reducer_nd.fit_transform(embeddings)
 
-    def cluster(self, embeddings: np.ndarray) -> np.ndarray:
-        """执行HDBSCAN聚类"""
-        # 先降维
+    def reduce_to_2d(self, embeddings: np.ndarray) -> np.ndarray:
+        """使用UMAP降维到2维（用于可视化）"""
+        print(f"UMAP降维到2D: {embeddings.shape[1]} -> 2")
+        self.reducer_2d = umap.UMAP(
+            n_components=2,
+            metric="cosine",
+            random_state=42,
+        )
+        return self.reducer_2d.fit_transform(embeddings)
+
+    def cluster(self, embeddings: np.ndarray) -> tuple[np.ndarray, np.ndarray | None]:
+        """执行HDBSCAN聚类，返回labels和2D坐标"""
+        coords_2d = None
+        # 先降维到n维用于聚类
         if self.use_umap and embeddings.shape[1] > self.n_components:
-            embeddings = self.reduce_dimensions(embeddings)
+            embeddings_nd = self.reduce_dimensions(embeddings)
+        else:
+            embeddings_nd = embeddings
+
+        # 降维到2维用于可视化
+        if self.use_umap and embeddings.shape[1] > 2:
+            coords_2d = self.reduce_to_2d(embeddings)
 
         clusterer = hdbscan.HDBSCAN(
             min_cluster_size=self.min_cluster_size,
@@ -57,8 +76,8 @@ class ThemeClusterer:
             metric="euclidean",
             cluster_selection_method=self.cluster_selection_method,
         )
-        labels = clusterer.fit_predict(embeddings)
-        return labels
+        labels = clusterer.fit_predict(embeddings_nd)
+        return labels, coords_2d
 
     def get_cluster_stats(self, labels: np.ndarray) -> dict:
         """获取聚类统计信息"""
@@ -150,7 +169,7 @@ class ThemeManager:
         min_cluster_size: int = 3,
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
-        n_components: int = 15,
+        n_components: int = n,
         use_umap: bool = True,
     ):
         self.clusterer = ThemeClusterer(
@@ -167,13 +186,19 @@ class ThemeManager:
         notes: list[Note],
         embeddings: np.ndarray,
         use_llm: bool = True,
-    ) -> list[Theme]:
-        """发现主题"""
+    ) -> tuple[list[Theme], np.ndarray, np.ndarray | None]:
+        """发现主题
+
+        Returns:
+            themes: 主题列表
+            labels: 聚类标签
+            coords_2d: UMAP 2D坐标（用于可视化）
+        """
         print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method}, n_components={self.clusterer.n_components})...")
         vector_dim = embeddings.shape[1]
         print(f"原始向量维度: {vector_dim}")
         t0 = time.time()
-        labels = self.clusterer.cluster(embeddings)
+        labels, coords_2d = self.clusterer.cluster(embeddings)
         stats = self.clusterer.get_cluster_stats(labels)
         print(f"发现 {stats['n_clusters']} 个主题，{stats['n_noise']} 个噪声点")
         elapsed = time.time() - t0
@@ -230,4 +255,4 @@ class ThemeManager:
             themes.append(theme)
             print(f"  - {label}: {len(cluster_notes)} 条笔记")
 
-        return themes, labels
+        return themes, labels, coords_2d

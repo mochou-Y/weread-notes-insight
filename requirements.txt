@@ -10,3 +10,5 @@ openai>=1.0.0
 pyvis>=0.3.0
 python-dotenv>=1.0.0
 jieba>=0.42.1
+streamlit>=1.30.0
+plotly>=5.18.0

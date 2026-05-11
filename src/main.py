@@ -3,6 +3,7 @@
 import argparse
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from config.settings import settings
 from src.api.weread import DataLoader, WereadAPI
@@ -126,7 +127,7 @@ def cmd_cluster(args):
         n_components=args.n_components,
         use_umap=not args.no_umap,
     )
-    themes, labels = manager.discover_themes(notes_exclude_bookmarks, embeddings, use_llm=True)
+    themes, labels, coords_2d = manager.discover_themes(notes_exclude_bookmarks, embeddings, use_llm=True)
 
     # 保存聚类结果
     import json
@@ -146,6 +147,13 @@ def cmd_cluster(args):
     # 保存 labels
     labels_path = loader.processed_dir / "labels.npy"
     np.save(labels_path, labels)
+
+    # 保存 UMAP 2D 坐标（用于可视化）
+    if coords_2d is not None:
+        coords_path = loader.processed_dir / "umap_coords.npy"
+        np.save(coords_path, coords_2d)
+        print(f"UMAP坐标已保存到 {coords_path}")
+
     print(f"聚类结果已保存到 {output_path}")
     print(f"Labels已保存到 {labels_path}")
 
@@ -242,6 +250,20 @@ def cmd_status(args):
     print("=" * 50)
 
 
+def cmd_serve(args):
+    """启动可视化服务"""
+    import subprocess
+    import sys
+
+    print("启动 Streamlit 服务...")
+    app_path = Path(__file__).parent / "app" / "main.py"
+    subprocess.run([
+        sys.executable, "-m", "streamlit", "run",
+        str(app_path),
+        "--server.port", str(args.port),
+    ])
+
+
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(description="微信读书笔记洞察工具")
@@ -271,6 +293,10 @@ def main():
     # status 命令
     status_parser = subparsers.add_parser("status", help="查看数据状态")
 
+    # serve 命令
+    serve_parser = subparsers.add_parser("serve", help="启动可视化服务")
+    serve_parser.add_argument("--port", type=int, default=8501, help="服务端口")
+
     args = parser.parse_args()
 
     if args.command == "fetch":
@@ -283,6 +309,8 @@ def main():
         cmd_graph(args)
     elif args.command == "status":
         cmd_status(args)
+    elif args.command == "serve":
+        cmd_serve(args)
     else:
         parser.print_help()
 
