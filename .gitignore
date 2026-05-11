@@ -64,3 +64,6 @@ htmlcov/
 
 demo/
 log/
+
+# MCP
+.playwright-mcp/

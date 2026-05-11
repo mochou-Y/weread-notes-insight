@@ -3,7 +3,10 @@
     "allow": [
       "Bash(.venv/Scripts/python -m py_compile src/embedding/embedder.py)",
       "Bash(.venv/Scripts/pip install *)",
-      "Bash(.venv/Scripts/python -c \"import jieba; print\\('jieba installed'\\)\")"
+      "Bash(.venv/Scripts/python -c \"import jieba; print\\('jieba installed'\\)\")",
+      "Bash(pip show *)",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_click"
     ]
   }
 }
