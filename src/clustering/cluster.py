@@ -27,21 +27,27 @@ class ThemeClusterer:
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
         n_components: int = 15,
+        n_neighbors: int = 15,
+        min_dist: float = 0.1,
         use_umap: bool = True,
     ):
         self.min_cluster_size = min_cluster_size
         self.min_samples = min_samples
         self.cluster_selection_method = cluster_selection_method
         self.n_components = n_components
+        self.n_neighbors = n_neighbors
+        self.min_dist = min_dist
         self.use_umap = use_umap
         self.reducer_nd = None  # n维降维器
         self.reducer_2d = None  # 2维降维器（用于可视化）
 
     def reduce_dimensions(self, embeddings: np.ndarray) -> np.ndarray:
         """使用UMAP降维到n_components维"""
-        print(f"UMAP降维: {embeddings.shape[1]} -> {self.n_components}")
+        print(f"UMAP降维: {embeddings.shape[1]} -> {self.n_components} (n_neighbors={self.n_neighbors}, min_dist={self.min_dist})")
         self.reducer_nd = umap.UMAP(
             n_components=self.n_components,
+            n_neighbors=self.n_neighbors,
+            min_dist=self.min_dist,
             metric="cosine",
             random_state=42,
         )
@@ -52,6 +58,8 @@ class ThemeClusterer:
         print(f"UMAP降维到2D: {embeddings.shape[1]} -> 2")
         self.reducer_2d = umap.UMAP(
             n_components=2,
+            n_neighbors=self.n_neighbors,
+            min_dist=self.min_dist,
             metric="cosine",
             random_state=42,
         )
@@ -112,13 +120,17 @@ class ThemeLabeler:
             base_url=self.base_url,
         )
 
-    def label_theme_by_llm(self, notes: list[Note], max_notes: int = 20) -> str:
-        """使用LLM生成主题标签"""
-        print("开始使用LLM生成主题标签...")
+    def label_theme_by_llm(self, notes: list[Note], max_notes: int = 20, max_chars: int = 200) -> str:
+        """使用LLM生成主题标签
+
+        Args:
+            notes: 笔记列表
+            max_notes: 最多使用的笔记数量
+            max_chars: 每条笔记的最大字符数
+        """
         # 取前N条笔记作为样本
-        # TODO 这里取了前N条，是否需要判断选取的笔记是否有代表性？
         sample_notes = notes[:max_notes]
-        contents = [note.content[:200] for note in sample_notes]  # 限制每条长度
+        contents = [note.content[:max_chars] for note in sample_notes]
 
         prompt = f"""以下是用户在微信读书中的笔记摘录，请用一个简短的词组（2-6个字）概括这些笔记的共同主题。
 
@@ -144,6 +156,10 @@ class ThemeLabeler:
             "可以", "可能", "应该", "必须", "需要", "能够", "已经", "正在",
             "我们", "他们", "她们", "它们", "自己", "他人", "大家", "人们",
             "这样", "那样", "怎样", "多少", "哪里", "那里", "这里", "真的",
+            "那么", "而后", "觉得", "或者", "就是", "即使", "我要", "其实",
+            "一日", "一样", "一切", "我会",
+            "my", "our", "what", "when", "how", "don", "want", "person",
+            "et", "us", "you", "your", "then", "they", "them", "their",
         }
 
         contents = [note.content for note in notes]
@@ -171,16 +187,41 @@ class ThemeManager:
         min_samples: int = 2,
         cluster_selection_method: str = "eom",
         n_components: int = 15,
+        n_neighbors: int = 15,
+        min_dist: float = 0.1,
         use_umap: bool = True,
+        label_strategy: str = "hybrid",
     ):
         self.clusterer = ThemeClusterer(
             min_cluster_size=min_cluster_size,
             min_samples=min_samples,
             cluster_selection_method=cluster_selection_method,
             n_components=n_components,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
             use_umap=use_umap,
         )
         self.labeler = ThemeLabeler()
+        self.label_strategy = label_strategy  # llm / tfidf / hybrid
+
+    def _generate_label(self, cluster_notes: list[Note]) -> str:
+        """根据策略生成主题标签"""
+        note_count = len(cluster_notes)
+
+        if self.label_strategy == "tfidf":
+            return self.labeler.label_theme_by_tfidf(cluster_notes)
+
+        if self.label_strategy == "hybrid":
+            # 小主题用TF-IDF，大主题用LLM
+            if note_count <= 10:
+                return self.labeler.label_theme_by_tfidf(cluster_notes)
+            elif note_count <= 30:
+                return self.labeler.label_theme_by_llm(cluster_notes, max_notes=5, max_chars=100)
+            else:
+                return self.labeler.label_theme_by_llm(cluster_notes, max_notes=10, max_chars=100)
+
+        # label_strategy == "llm"
+        return self.labeler.label_theme_by_llm(cluster_notes)
 
     def discover_themes(
         self,
@@ -195,7 +236,7 @@ class ThemeManager:
             labels: 聚类标签
             coords_2d: UMAP 2D坐标（用于可视化）
         """
-        print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method}, n_components={self.clusterer.n_components})...")
+        print(f"执行聚类 (min_cluster_size={self.clusterer.min_cluster_size}, min_samples={self.clusterer.min_samples}, method={self.clusterer.cluster_selection_method}, n_components={self.clusterer.n_components}, n_neighbors={self.clusterer.n_neighbors}, min_dist={self.clusterer.min_dist})...")
         vector_dim = embeddings.shape[1]
         print(f"原始向量维度: {vector_dim}")
         t0 = time.time()
@@ -220,12 +261,19 @@ class ThemeManager:
         # 生成主题标签
         labels_map = {}
         t1 = time.time()
-        if use_llm:
+
+        actual_strategy = self.label_strategy if use_llm else "tfidf"
+        print(f"标签生成策略: {actual_strategy}")
+
+        if actual_strategy == "tfidf":
+            for cluster_id, cluster_notes in cluster_data.items():
+                labels_map[cluster_id] = self.labeler.label_theme_by_tfidf(cluster_notes)
+        else:
             def label_cluster(cluster_id, cluster_notes):
                 try:
-                    label = self.labeler.label_theme_by_llm(cluster_notes)
+                    label = self._generate_label(cluster_notes)
                 except Exception as e:
-                    logger.warning(f"LLM标注失败，使用TF-IDF: {e}")
+                    logger.warning(f"标注失败，使用TF-IDF: {e}")
                     label = self.labeler.label_theme_by_tfidf(cluster_notes)
                 return cluster_id, label
 
@@ -237,9 +285,6 @@ class ThemeManager:
                 for future in as_completed(futures):
                     cid, label = future.result()
                     labels_map[cid] = label
-        else:
-            for cluster_id, cluster_notes in cluster_data.items():
-                labels_map[cluster_id] = self.labeler.label_theme_by_tfidf(cluster_notes)
 
         elapsed = time.time() - t1
         m, s = divmod(int(elapsed), 60)

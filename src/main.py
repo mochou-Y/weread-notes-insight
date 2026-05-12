@@ -140,7 +140,10 @@ def cmd_cluster(args):
         min_samples=args.min_samples,
         cluster_selection_method=args.method,
         n_components=args.n_components,
+        n_neighbors=args.n_neighbors,
+        min_dist=args.min_dist,
         use_umap=not args.no_umap,
+        label_strategy=args.label_strategy,
     )
     themes, labels, coords_2d = manager.discover_themes(filtered_notes, embeddings, use_llm=True)
 
@@ -411,6 +414,9 @@ def main():
     cluster_parser.add_argument("--min-samples", type=int, default=2, help="HDBSCAN min_samples参数")
     cluster_parser.add_argument("--method", type=str, default="eom", choices=["eom", "leaf"], help="聚类选择方法: eom(粗粒度) 或 leaf(细粒度)")
     cluster_parser.add_argument("--n-components", type=int, default=15, help="UMAP降维目标维度")
+    cluster_parser.add_argument("--n-neighbors", type=int, default=15, help="UMAP n_neighbors参数，影响全局结构保留")
+    cluster_parser.add_argument("--min-dist", type=float, default=0.1, help="UMAP min_dist参数，影响簇的紧凑程度")
+    cluster_parser.add_argument("--label-strategy", type=str, default="hybrid", choices=["llm", "tfidf", "hybrid"], help="标签生成策略: llm(全LLM), tfidf(全TF-IDF), hybrid(混合)")
     cluster_parser.add_argument("--no-umap", action="store_true", help="禁用UMAP降维")
 
     # evaluate 命令
