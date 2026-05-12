@@ -173,6 +173,103 @@ def cmd_cluster(args):
     print(f"Labels已保存到 {labels_path}")
 
 
+def cmd_evaluate(args):
+    """聚类质量评估命令"""
+    print("开始评估聚类质量...")
+
+    loader = DataLoader()
+    notes = loader.load_all_notes()
+
+    if not notes:
+        print("错误: 没有找到笔记数据，请先运行 fetch 命令")
+        sys.exit(1)
+
+    # 过滤笔记：去除书签、空内容、包含[插图]的笔记
+    filtered_notes = [
+        n for n in notes
+        if n.type != "bookmark"
+        and n.content.strip()
+        and "[插图]" not in n.content
+        and "[插图]" not in (n.context or "")
+    ]
+
+    # 加载聚类结果
+    import json
+    import numpy as np
+    from src.data.models import Theme
+
+    themes_path = loader.processed_dir / "themes.json"
+    if not themes_path.exists():
+        print("错误: 没有找到聚类结果，请先运行 cluster 命令")
+        sys.exit(1)
+
+    with open(themes_path, encoding="utf-8") as f:
+        themes_data = json.load(f)
+    themes = [Theme(**t) for t in themes_data["themes"]]
+
+    # 加载 labels
+    labels_path = loader.processed_dir / "labels.npy"
+    if not labels_path.exists():
+        print("错误: 没有找到labels数据，请先运行 cluster 命令")
+        sys.exit(1)
+    labels = np.load(labels_path)
+
+    # 加载 UMAP 2D 坐标
+    coords_path = loader.processed_dir / "umap_coords.npy"
+    if not coords_path.exists():
+        print("错误: 没有找到UMAP坐标数据，请重新运行 cluster 命令")
+        sys.exit(1)
+    coords_2d = np.load(coords_path)
+
+    # 确保数据量一致
+    if len(labels) != len(filtered_notes):
+        print(f"警告: labels数量({len(labels)})与过滤后笔记数量({len(filtered_notes)})不一致")
+        min_len = min(len(labels), len(filtered_notes))
+        labels = labels[:min_len]
+        filtered_notes = filtered_notes[:min_len]
+        coords_2d = coords_2d[:min_len]
+
+    # 计算技术指标
+    from src.clustering.evaluate import (
+        compute_technical_metrics,
+        evaluate_theme_consistency,
+        print_evaluation_report,
+    )
+
+    metrics = compute_technical_metrics(coords_2d, labels)
+
+    # LLM 语义评估
+    llm_results = None
+    if not args.no_llm:
+        if not settings.openai_api_key:
+            print("警告: 未设置 OPENAI_API_KEY，跳过 LLM 评估")
+        else:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=settings.openai_api_key,
+                base_url=settings.openai_base_url,
+            )
+            note_map = {n.id: n for n in filtered_notes}
+            llm_results = []
+            for theme in themes:
+                theme_notes = [note_map[nid] for nid in theme.note_ids if nid in note_map]
+                if not theme_notes:
+                    continue
+                result = evaluate_theme_consistency(
+                    theme, theme_notes, client, settings.llm_model,
+                    sample_size=args.sample,
+                )
+                result["label"] = theme.label
+                result["note_count"] = len(theme_notes)
+                llm_results.append(result)
+
+            # 按评分排序
+            llm_results.sort(key=lambda r: r["score"])
+
+    # 打印报告
+    print_evaluation_report(metrics, llm_results)
+
+
 def cmd_graph(args):
     """生成图谱命令"""
     print("开始生成主题图谱...")
@@ -316,6 +413,11 @@ def main():
     cluster_parser.add_argument("--n-components", type=int, default=15, help="UMAP降维目标维度")
     cluster_parser.add_argument("--no-umap", action="store_true", help="禁用UMAP降维")
 
+    # evaluate 命令
+    evaluate_parser = subparsers.add_parser("evaluate", help="评估聚类质量")
+    evaluate_parser.add_argument("--no-llm", action="store_true", help="跳过LLM语义评估")
+    evaluate_parser.add_argument("--sample", type=int, default=3, help="每个主题抽样数量（默认3）")
+
     # graph 命令
     graph_parser = subparsers.add_parser("graph", help="生成主题图谱")
     graph_parser.add_argument("--output", type=str, default="graph.html", help="输出文件名")
@@ -335,6 +437,8 @@ def main():
         cmd_embedding(args)
     elif args.command == "cluster":
         cmd_cluster(args)
+    elif args.command == "evaluate":
+        cmd_evaluate(args)
     elif args.command == "graph":
         cmd_graph(args)
     elif args.command == "status":

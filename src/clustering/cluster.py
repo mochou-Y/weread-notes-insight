@@ -114,6 +114,7 @@ class ThemeLabeler:
 
     def label_theme_by_llm(self, notes: list[Note], max_notes: int = 20) -> str:
         """使用LLM生成主题标签"""
+        print("开始使用LLM生成主题标签...")
         # 取前N条笔记作为样本
         # TODO 这里取了前N条，是否需要判断选取的笔记是否有代表性？
         sample_notes = notes[:max_notes]
