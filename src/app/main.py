@@ -404,6 +404,42 @@ def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: di
     return fig
 
 
+def _render_master_theme(profile: dict):
+    """渲染阅读母题区块"""
+    master = profile.get("master_theme", {})
+    if master.get("title"):
+        st.subheader("🎯 阅读母题")
+        st.caption("跨书籍、跨主题反复出现的核心生命议题，所有分析线索的汇入口")
+        src = master.get("source", "llm")
+        if src == "fallback":
+            st.warning("LLM 暂不可用，以下为基于桥接数据的规则归纳。请检查 API 连接后重新运行 profile。")
+        elif src == "cached" and master.get("llm_error"):
+            st.info("本次 LLM 调用失败，展示的是上次成功生成的母题。")
+        st.markdown(f"## {master['title']}")
+        if master.get("statement"):
+            st.markdown(f"**{master['statement']}**")
+        if master.get("narrative"):
+            st.markdown(master["narrative"])
+
+        clue_col, echo_col = st.columns(2)
+        with clue_col:
+            if master.get("converging_clues"):
+                st.markdown("**汇聚线索**")
+                for clue in master["converging_clues"]:
+                    st.markdown(f"- {clue}")
+        with echo_col:
+            if master.get("manifestations"):
+                st.markdown("**书中回响**")
+                for item in master["manifestations"]:
+                    st.markdown(f"- {item}")
+    elif master.get("llm_error") or master.get("error"):
+        st.subheader("🎯 阅读母题")
+        st.error(
+            f"母题提炼失败：{master.get('llm_error') or master.get('error')}。"
+            "请检查 OPENAI_API_KEY / OPENAI_BASE_URL 后重新运行 profile。"
+        )
+
+
 def view_noise_analysis(analysis, notes, themes, book_map):
     """噪声深度分析视图"""
     st.header("🔍 噪声深度分析")
@@ -431,10 +467,18 @@ def view_noise_analysis(analysis, notes, themes, book_map):
     cognitive = profile.get("cognitive_style", {})
     if cognitive.get("keywords") or cognitive.get("description"):
         st.subheader("🧠 认知风格")
+        desc = cognitive.get("description", "")
+        src = cognitive.get("source", "llm")
+        if desc.startswith("分析失败"):
+            st.error("认知风格分析失败，请检查 OPENAI_API_KEY / OPENAI_BASE_URL 网络连接后重新运行 profile。")
+        elif src == "fallback":
+            st.warning("LLM 暂不可用，以下为基于桥接数据的简要归纳。")
+        elif src == "cached" and cognitive.get("llm_error"):
+            st.info("本次 LLM 调用失败，展示的是上次成功生成的认知风格。")
         if cognitive.get("keywords"):
             st.markdown(" ".join(f"`{kw}`" for kw in cognitive["keywords"]))
-        if cognitive.get("description"):
-            st.markdown(cognitive["description"])
+        if desc and not desc.startswith("分析失败"):
+            st.markdown(desc)
 
     # 图表区
     chart_col1, chart_col2 = st.columns(2)
@@ -564,6 +608,8 @@ def view_noise_analysis(analysis, notes, themes, book_map):
         st.subheader("📖 跨领域书籍")
         st.info("未识别到跨领域书籍。请重新运行 `python -m src.main analyze --mode profile` 生成完整数据。")
 
+    _render_master_theme(profile)
+
     # 噪声微主题
     micro_themes = analysis.get("micro_themes", [])
     if micro_themes:
@@ -594,22 +640,25 @@ def main():
 
     st.title("📚 微信读书笔记主题洞察")
 
-    # 加载数据
-    with st.spinner("加载数据..."):
-        notes, book_map, themes, labels, coords_2d = load_data()
-        noise_analysis = load_noise_analysis(_noise_analysis_mtime())
+    pages = ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察"]
 
-    # 侧边栏导航
+    # 侧边栏导航（放在刷新按钮之前，并用 key 持久化选中页）
+    page = st.sidebar.radio(
+        "导航",
+        pages,
+        key="nav_page",
+        label_visibility="collapsed",
+    )
+
     if st.sidebar.button("🔄 刷新数据"):
         load_data.clear()
         load_noise_analysis.clear()
         st.rerun()
 
-    page = st.sidebar.radio(
-        "导航",
-        ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察"],
-        label_visibility="collapsed",
-    )
+    # 加载数据
+    with st.spinner("加载数据..."):
+        notes, book_map, themes, labels, coords_2d = load_data()
+        noise_analysis = load_noise_analysis(_noise_analysis_mtime())
 
     # 页面切换
     if page == "📊 概览":

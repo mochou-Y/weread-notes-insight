@@ -365,8 +365,14 @@ class NoiseAnalyzer:
             for d, c in depth_counter.most_common()
         ]
 
+        prev_profile = self._load_previous_output()
+
         # 认知风格 LLM 分析
         cognitive_style = self._llm_cognitive_style(micro_themes, bridges)
+        cognitive_style = self._resolve_llm_field(
+            cognitive_style, prev_profile, "cognitive_style",
+            lambda: self._fallback_cognitive_style(depth_indicators, bridges),
+        )
 
         bridge_notes = getattr(self, "_bridge_notes_detail", None)
         if bridge_notes is None:
@@ -378,6 +384,21 @@ class NoiseAnalyzer:
             print(f"检测到 {len(bridge_notes)} 条桥接笔记")
         cross_domain_books = self.identify_cross_domain_books(bridge_notes)
         print(f"识别 {len(cross_domain_books)} 本跨领域书籍")
+
+        print("提炼阅读母题...")
+        master_theme = self._llm_master_theme(
+            knowledge_domains, depth_indicators, cognitive_style,
+            bridges, micro_themes, cross_domain_books,
+        )
+        master_theme = self._resolve_llm_field(
+            master_theme, prev_profile, "master_theme",
+            lambda: self._fallback_master_theme(
+                knowledge_domains, depth_indicators, bridges,
+            ),
+        )
+        if master_theme.get("title"):
+            src = master_theme.get("source", "llm")
+            print(f"  母题: {master_theme['title']} ({src})")
 
         profile = {
             "noise_stats": {
@@ -392,6 +413,7 @@ class NoiseAnalyzer:
                 "cross_interests": cross_interests,
                 "cognitive_style": cognitive_style,
                 "depth_indicators": depth_indicators,
+                "master_theme": master_theme,
             },
             "generated_at": datetime.now().isoformat(),
         }
@@ -509,6 +531,225 @@ class NoiseAnalyzer:
         except Exception as e:
             return {"keywords": [], "description": f"分析失败: {e}"}
 
+    def _llm_master_theme(
+        self,
+        knowledge_domains: list[dict],
+        depth_indicators: list[dict],
+        cognitive_style: dict,
+        bridges: list[dict],
+        micro_themes: list[dict],
+        cross_domain_books: list[dict],
+    ) -> dict:
+        """从画像分析中提炼一个贯穿所有线索的阅读母题"""
+        top_domains = [f"{d['domain']}({d['weight']:.0%})" for d in knowledge_domains[:8]]
+        top_depth = [f"{d['domain']}({d['bridge_count']}次桥接)" for d in depth_indicators[:6]]
+        bridge_insights = [
+            f"{b['themes'][0]}↔{b['themes'][1]}: {b.get('insight', '')[:80]}"
+            for b in bridges[:6] if b.get("insight")
+        ]
+        cross_books = [
+            f"《{b['title']}》({b['theme_count']}主题/{b['bridge_note_count']}桥接)"
+            for b in cross_domain_books[:6]
+        ]
+        sample_notes = []
+        for b in bridges[:4]:
+            sample_notes.extend(b.get("sample_notes", [])[:2])
+        for mt in micro_themes[:2]:
+            sample_notes.extend(mt.get("sample_notes", [])[:2])
+        notes_text = "\n".join(f"- {c[:120]}" for c in sample_notes[:12])
+
+        cognitive_desc = cognitive_style.get("description", "")
+        cognitive_kw = ", ".join(cognitive_style.get("keywords", []))
+
+        prompt = f"""你是一位阅读心理分析者。以下是一位读者跨大量书籍的笔记分析结果——包含知识域分布、主题桥接、认知风格与跨领域书籍等线索。
+
+请从中提炼出 **唯一一个** 贯穿所有线索的「阅读母题」：这是读者在不同书里反复思考、所有阅读经验最终汇入的核心生命议题。不要罗列多个主题，要找到那个最深的、统一的切口。
+
+## 分析材料
+
+知识域 Top: {', '.join(top_domains)}
+深度桥接领域: {', '.join(top_depth)}
+认知关键词: {cognitive_kw}
+认知风格: {cognitive_desc[:300]}
+主要桥接洞察:
+{chr(10).join(f'- {i}' for i in bridge_insights) or '- 无'}
+跨领域书籍: {', '.join(cross_books) or '无'}
+代表性笔记:
+{notes_text}
+
+## 输出格式（严格遵守，不要其他内容）
+
+母题: [4-12字的母题命名，如「在局限中建构真实自我」]
+核心命题: [一句话：读者反复追问的根本问题]
+展开说明: [2-3句话：为何这是所有线索的汇点，它如何串联不同领域的阅读]
+汇聚线索: [线索1, 线索2, 线索3, 线索4]
+书中回响: [回响1; 回响2; 回响3]"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500,
+            )
+            text = response.choices[0].message.content.strip()
+            return self._parse_master_theme(text)
+        except Exception as e:
+            return {"title": "", "statement": "", "narrative": "", "converging_clues": [], "manifestations": [], "error": str(e)}
+
+    def _parse_master_theme(self, text: str) -> dict:
+        """解析 LLM 返回的母题结构化文本"""
+        result = {
+            "title": "",
+            "statement": "",
+            "narrative": "",
+            "converging_clues": [],
+            "manifestations": [],
+        }
+        for line in text.split("\n"):
+            line = line.strip()
+            if line.startswith("母题"):
+                result["title"] = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+            elif line.startswith("核心命题"):
+                result["statement"] = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+            elif line.startswith("展开说明"):
+                result["narrative"] = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+            elif line.startswith("汇聚线索"):
+                kw_str = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+                kw_str = kw_str.strip("[]")
+                result["converging_clues"] = [k.strip() for k in kw_str.split(",") if k.strip()]
+            elif line.startswith("书中回响"):
+                kw_str = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+                kw_str = kw_str.strip("[]")
+                result["manifestations"] = [k.strip() for k in kw_str.split(";") if k.strip()]
+
+        if not result["title"] and text:
+            result["narrative"] = text
+        return result
+
+    def _load_previous_output(self) -> Optional[dict]:
+        """加载已有的分析结果，供 LLM 失败时回退"""
+        path = Path("log/insights_output/noise_cross_cognitive.json")
+        if not path.exists():
+            return None
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+    @staticmethod
+    def _is_llm_failed_cognitive(cs: dict) -> bool:
+        desc = cs.get("description", "")
+        return bool(desc.startswith("分析失败")) or bool(cs.get("error"))
+
+    @staticmethod
+    def _is_llm_failed_master(mt: dict) -> bool:
+        return not mt.get("title") or bool(mt.get("error"))
+
+    def _resolve_llm_field(self, new_val: dict, prev_profile: Optional[dict], key: str, fallback_fn) -> dict:
+        """LLM 失败时优先沿用上次成功结果，否则用规则 fallback"""
+        is_failed = (
+            self._is_llm_failed_cognitive(new_val)
+            if key == "cognitive_style"
+            else self._is_llm_failed_master(new_val)
+        )
+        if not is_failed:
+            new_val["source"] = "llm"
+            return new_val
+
+        prev = (prev_profile or {}).get("user_profile", {}).get(key)
+        prev_ok = prev and not (
+            self._is_llm_failed_cognitive(prev)
+            if key == "cognitive_style"
+            else self._is_llm_failed_master(prev)
+        )
+        if prev_ok:
+            print(f"  {key}: LLM 失败，沿用上次结果")
+            prev = dict(prev)
+            prev["source"] = "cached"
+            prev["llm_error"] = new_val.get("error") or new_val.get("description", "")
+            return prev
+
+        print(f"  {key}: LLM 失败，使用规则 fallback")
+        fb = fallback_fn()
+        fb["source"] = "fallback"
+        fb["llm_error"] = new_val.get("error") or new_val.get("description", "")
+        return fb
+
+    def _fallback_cognitive_style(self, depth_indicators: list[dict], bridges: list[dict]) -> dict:
+        """LLM 不可用时的认知风格规则归纳"""
+        keywords = list(dict.fromkeys(
+            d["domain"].split("/")[0] for d in depth_indicators[:5]
+        ))[:5]
+        parts = []
+        if bridges and bridges[0].get("insight"):
+            parts.append(bridges[0]["insight"])
+        if depth_indicators:
+            hub = depth_indicators[0]
+            parts.append(
+                f"桥接最密集的领域是「{hub['domain']}」（{hub['bridge_count']}次），"
+                "表明这是跨书阅读中最核心的交汇地带。"
+            )
+        description = " ".join(parts) if parts else "基于桥接数据的规则归纳。"
+        return {"keywords": keywords, "description": description}
+
+    def _fallback_master_theme(
+        self,
+        knowledge_domains: list[dict],
+        depth_indicators: list[dict],
+        bridges: list[dict],
+    ) -> dict:
+        """LLM 不可用时的阅读母题规则归纳"""
+        hub = depth_indicators[0] if depth_indicators else None
+        top_bridge = bridges[0] if bridges else None
+
+        if top_bridge:
+            t0, t1 = top_bridge["themes"]
+            title = f"{t0} × {t1}"
+            statement = (
+                f"在不同书籍的笔记中，「{t0}」与「{t1}」"
+                f"反复交汇（{top_bridge['count']}条桥接笔记），"
+                "构成跨域阅读的核心追问。"
+            )
+            narrative = top_bridge.get("insight") or (
+                f"「{hub['domain']}」是桥接最密集的领域"
+                f"（{hub['bridge_count']}次），"
+                f"与「{t0}↔{t1}」共同构成阅读轨迹的主轴。"
+                if hub else ""
+            )
+        elif hub:
+            title = hub["domain"]
+            statement = f"「{hub['domain']}」是跨书笔记中桥接最密集的领域，是理解阅读轨迹的入口。"
+            narrative = ""
+        else:
+            dom = knowledge_domains[0]["domain"] if knowledge_domains else "跨域阅读"
+            title = dom.replace("[交叉] ", "")
+            statement = ""
+            narrative = "基于知识域分布的规则归纳。"
+
+        converging_clues = []
+        if hub:
+            converging_clues.append(f"桥接枢纽：{hub['domain']}（{hub['bridge_count']}次）")
+        for b in bridges[:2]:
+            converging_clues.append(f"{b['themes'][0]} ↔ {b['themes'][1]}（{b['count']}条）")
+        for d in knowledge_domains[:2]:
+            converging_clues.append(f"{d['domain']}（{d['weight']:.0%}）")
+
+        manifestations = []
+        for b in bridges[:3]:
+            if b.get("insight"):
+                manifestations.append(b["insight"][:80])
+            else:
+                manifestations.append(f"{b['themes'][0]} ↔ {b['themes'][1]}（{b['count']}条）")
+
+        return {
+            "title": title,
+            "statement": statement,
+            "narrative": narrative,
+            "converging_clues": converging_clues[:4],
+            "manifestations": manifestations,
+        }
+
     # ---- 缓存辅助 ----
 
     def _save_cache(self, filename: str, data):
@@ -553,6 +794,13 @@ class NoiseAnalyzer:
             print(f"  关键词: {', '.join(up['cognitive_style']['keywords'])}")
             print(f"  {up['cognitive_style']['description']}")
 
+        mt = up.get("master_theme", {})
+        if mt.get("title"):
+            print(f"\n--- 阅读母题 ---")
+            print(f"  {mt['title']}")
+            if mt.get("statement"):
+                print(f"  {mt['statement']}")
+
         # 保存文本版本
         import io
         buf = io.StringIO()
@@ -576,6 +824,19 @@ class NoiseAnalyzer:
         if up["cognitive_style"]["keywords"]:
             buf.write(f"  关键词: {', '.join(up['cognitive_style']['keywords'])}\n")
         buf.write(f"  {up['cognitive_style']['description']}\n")
+
+        mt = up.get("master_theme", {})
+        if mt.get("title"):
+            buf.write("\n=== 阅读母题 ===\n")
+            buf.write(f"  {mt['title']}\n")
+            if mt.get("statement"):
+                buf.write(f"  {mt['statement']}\n")
+            if mt.get("narrative"):
+                buf.write(f"  {mt['narrative']}\n")
+            if mt.get("converging_clues"):
+                buf.write(f"  汇聚线索: {', '.join(mt['converging_clues'])}\n")
+            if mt.get("manifestations"):
+                buf.write(f"  书中回响: {'; '.join(mt['manifestations'])}\n")
 
         buf.write("\n=== 桥接洞察 ===\n")
         for b in profile["bridge_patterns"][:10]:
