@@ -164,11 +164,8 @@ class NoiseAnalyzer:
 
     # ---- Step 2: 桥接分析 ----
 
-    def analyze_bridges(self) -> list[dict]:
-        """分析噪声笔记与已有主题的桥接关系"""
-        print("\n=== 交叉桥分析 ===")
-
-        # 构建主题质心
+    def _detect_bridge_notes(self) -> tuple[list[dict], Counter, dict]:
+        """检测桥接笔记（纯计算，不调用 LLM）"""
         note_id_to_idx = {n.id: i for i, n in enumerate(self.notes)}
         theme_centroids = {}
         theme_labels = {}
@@ -179,36 +176,30 @@ class NoiseAnalyzer:
                 continue
             emb = self.embeddings[indices]
             centroid = emb.mean(axis=0)
-            # 归一化
             norm = np.linalg.norm(centroid)
             if norm > 0:
                 centroid = centroid / norm
             theme_centroids[theme.id] = centroid
             theme_labels[theme.id] = theme.label
 
-        print(f"计算了 {len(theme_centroids)} 个主题质心")
-
-        # 噪声 embedding 归一化
         noise_emb = self.embeddings[self.noise_indices]
         norms = np.linalg.norm(noise_emb, axis=1, keepdims=True)
         norms[norms == 0] = 1
         noise_emb_normed = noise_emb / norms
 
-        # 计算每个噪声笔记与所有质心的余弦相似度
         centroid_matrix = np.array([theme_centroids[tid] for tid in theme_centroids])
         theme_ids_ordered = list(theme_centroids.keys())
-        sim_matrix = noise_emb_normed @ centroid_matrix.T  # (n_noise, n_themes)
+        sim_matrix = noise_emb_normed @ centroid_matrix.T
 
-        # 识别桥接笔记
         bridge_pair_counter = Counter()
-        bridge_notes_map: dict[str, list[dict]] = {}
+        bridge_notes_map: dict[tuple, list[dict]] = {}
+        bridge_notes_detail: list[dict] = []
 
         for i in range(len(self.noise_indices)):
             sims = sim_matrix[i]
             top_k_indices = np.argsort(sims)[-self.bridge_top_k:][::-1]
             top_k_sims = sims[top_k_indices]
 
-            # 筛选超过阈值的主题
             qualified = [
                 (theme_ids_ordered[top_k_indices[j]], top_k_sims[j])
                 for j in range(len(top_k_indices))
@@ -216,31 +207,44 @@ class NoiseAnalyzer:
             ]
 
             if len(qualified) >= 2:
-                # 取前2个形成桥接对
                 pair = tuple(sorted([theme_labels[qualified[0][0]], theme_labels[qualified[1][0]]]))
                 bridge_pair_counter[pair] += 1
                 if pair not in bridge_notes_map:
                     bridge_notes_map[pair] = []
                 note = self.notes[self.noise_indices[i]]
-                bridge_notes_map[pair].append({
+                bridge_themes = [theme_labels[tid] for tid, sim in qualified[:2]]
+                note_detail = {
                     "note_id": note.id,
+                    "book_id": note.book_id,
+                    "book_title": note.book_title,
                     "content": note.content[:200],
-                    "similarities": {
-                        theme_labels[tid]: round(float(sim), 3)
-                        for tid, sim in qualified[:2]
-                    },
-                })
+                    "themes": bridge_themes,
+                }
+                bridge_notes_map[pair].append(note_detail)
+                bridge_notes_detail.append(note_detail)
 
-        # 排序并构建结果
+        return bridge_notes_detail, bridge_pair_counter, bridge_notes_map
+
+    def analyze_bridges(self) -> list[dict]:
+        """分析噪声笔记与已有主题的桥接关系"""
+        print("\n=== 交叉桥分析 ===")
+
+        bridge_notes_detail, bridge_pair_counter, bridge_notes_map = self._detect_bridge_notes()
+        self._bridge_notes_detail = bridge_notes_detail
+        print(f"检测到 {len(bridge_notes_detail)} 条桥接笔记")
+
+        # 先缓存桥接笔记明细，避免 LLM 阶段中断导致丢失
+        self._save_cache("noise_bridge_notes.json", bridge_notes_detail)
+
+        # 排序并构建结果（LLM 分析）
         bridges = []
-        top_n_for_llm = 10  # 只对 top N 桥接对调用 LLM
-        min_bridge_count = 4  # 过滤低频桥接对
+        top_n_for_llm = 10
+        min_bridge_count = 4
         sorted_pairs = [(p, c) for p, c in bridge_pair_counter.most_common() if c >= min_bridge_count]
 
         for idx, (pair, count) in enumerate(sorted_pairs):
             notes_for_llm = bridge_notes_map[pair][:5]
 
-            # 只对 top N 做较深的 LLM 分析
             if idx < top_n_for_llm:
                 insight = self._llm_bridge_insight(pair, notes_for_llm)
             else:
@@ -255,11 +259,74 @@ class NoiseAnalyzer:
             print(f"  - {pair[0]} <-> {pair[1]}: {count} 条桥接笔记")
 
         print(f"共发现 {len(bridges)} 个桥接模式")
-
-        # 缓存
         self._save_cache("noise_bridges.json", bridges)
 
         return bridges
+
+    def identify_cross_domain_books(self, bridge_notes: list[dict]) -> list[dict]:
+        """识别跨领域书籍：笔记横跨多个主题，或含大量桥接笔记"""
+        note_to_theme: dict[str, str] = {}
+        for theme in self.themes:
+            for nid in theme.note_ids:
+                note_to_theme[nid] = theme.label
+
+        books: dict[str, dict] = {}
+
+        def ensure_book(note: Note) -> dict:
+            if note.book_id not in books:
+                books[note.book_id] = {
+                    "book_id": note.book_id,
+                    "title": note.book_title,
+                    "author": note.book_author,
+                    "themes": set(),
+                    "bridge_note_count": 0,
+                    "bridge_pairs": set(),
+                    "note_count": 0,
+                    "sample_bridge_notes": [],
+                }
+            return books[note.book_id]
+
+        for note in self.notes:
+            b = ensure_book(note)
+            b["note_count"] += 1
+            if note.id in note_to_theme:
+                b["themes"].add(note_to_theme[note.id])
+
+        for bn in bridge_notes:
+            note = next((n for n in self.notes if n.id == bn["note_id"]), None)
+            if note is None:
+                continue
+            b = ensure_book(note)
+            b["bridge_note_count"] += 1
+            pair = tuple(sorted(bn["themes"]))
+            b["bridge_pairs"].add(pair)
+            for t in bn["themes"]:
+                b["themes"].add(t)
+            if len(b["sample_bridge_notes"]) < 3:
+                b["sample_bridge_notes"].append(bn["content"])
+
+        result = []
+        for b in books.values():
+            theme_count = len(b["themes"])
+            if theme_count < 2 and b["bridge_note_count"] < 2:
+                continue
+            bridge_pair_count = len(b["bridge_pairs"])
+            score = theme_count * 2 + b["bridge_note_count"] * 3 + bridge_pair_count
+            result.append({
+                "book_id": b["book_id"],
+                "title": b["title"],
+                "author": b["author"],
+                "theme_count": theme_count,
+                "themes": sorted(b["themes"]),
+                "bridge_note_count": b["bridge_note_count"],
+                "bridge_pairs": [list(p) for p in sorted(b["bridge_pairs"])],
+                "note_count": b["note_count"],
+                "cross_score": score,
+                "sample_bridge_notes": b["sample_bridge_notes"],
+            })
+
+        result.sort(key=lambda x: -x["cross_score"])
+        return result
 
     # ---- Step 3: 用户画像 ----
 
@@ -301,6 +368,17 @@ class NoiseAnalyzer:
         # 认知风格 LLM 分析
         cognitive_style = self._llm_cognitive_style(micro_themes, bridges)
 
+        bridge_notes = getattr(self, "_bridge_notes_detail", None)
+        if bridge_notes is None:
+            bridge_notes = self._load_cache("noise_bridge_notes.json")
+        if not bridge_notes:
+            print("桥接笔记缓存不存在，重新检测...")
+            bridge_notes, _, _ = self._detect_bridge_notes()
+            self._save_cache("noise_bridge_notes.json", bridge_notes)
+            print(f"检测到 {len(bridge_notes)} 条桥接笔记")
+        cross_domain_books = self.identify_cross_domain_books(bridge_notes)
+        print(f"识别 {len(cross_domain_books)} 本跨领域书籍")
+
         profile = {
             "noise_stats": {
                 "total": int(len(self.noise_indices)),
@@ -308,6 +386,7 @@ class NoiseAnalyzer:
             },
             "micro_themes": micro_themes,
             "bridge_patterns": bridges,
+            "cross_domain_books": cross_domain_books,
             "user_profile": {
                 "knowledge_domains": knowledge_domains,
                 "cross_interests": cross_interests,
@@ -506,6 +585,13 @@ class NoiseAnalyzer:
         buf.write("\n=== 噪声微主题 ===\n")
         for mt in profile["micro_themes"][:15]:
             buf.write(f"  {mt['label']}: {mt['size']}条\n")
+
+        buf.write("\n=== 跨领域书籍 ===\n")
+        for book in profile.get("cross_domain_books", [])[:15]:
+            buf.write(
+                f"  《{book['title']}》: {book['theme_count']} 个主题, "
+                f"{book['bridge_note_count']} 条桥接笔记\n"
+            )
 
         output_dir = Path("log/insights_output")
         output_dir.mkdir(parents=True, exist_ok=True)

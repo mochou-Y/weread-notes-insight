@@ -21,9 +21,16 @@ from src.data.models import Theme
 NOISE_ANALYSIS_PATH = project_root / "log" / "insights_output" / "noise_cross_cognitive.json"
 
 
-@st.cache_resource
-def load_noise_analysis():
-    """加载噪声深度分析结果（缓存）"""
+def _noise_analysis_mtime() -> float:
+    """分析结果文件的修改时间，用于缓存失效"""
+    if NOISE_ANALYSIS_PATH.exists():
+        return NOISE_ANALYSIS_PATH.stat().st_mtime
+    return 0.0
+
+
+@st.cache_data(show_spinner=False)
+def load_noise_analysis(_mtime: float):
+    """加载噪声深度分析结果（文件更新后自动刷新）"""
     if not NOISE_ANALYSIS_PATH.exists():
         return None
     with open(NOISE_ANALYSIS_PATH, encoding="utf-8") as f:
@@ -237,6 +244,84 @@ def _horizontal_bar(df, x, y, title_color: str, x_label: str, height: int = 450)
     return fig
 
 
+def _compute_cross_domain_books(notes, themes, bridge_notes: list[dict] | None = None):
+    """识别跨领域书籍（前端 fallback，逻辑与 NoiseAnalyzer 一致）"""
+    bridge_notes = bridge_notes or []
+    note_to_theme: dict[str, str] = {}
+    for theme in themes:
+        for nid in theme.note_ids:
+            note_to_theme[nid] = theme.label
+
+    note_map = {n.id: n for n in notes}
+    books: dict[str, dict] = {}
+
+    def ensure_book(note):
+        if note.book_id not in books:
+            books[note.book_id] = {
+                "book_id": note.book_id,
+                "title": note.book_title,
+                "author": note.book_author,
+                "themes": set(),
+                "bridge_note_count": 0,
+                "bridge_pairs": set(),
+                "note_count": 0,
+                "sample_bridge_notes": [],
+            }
+        return books[note.book_id]
+
+    for note in notes:
+        b = ensure_book(note)
+        b["note_count"] += 1
+        if note.id in note_to_theme:
+            b["themes"].add(note_to_theme[note.id])
+
+    for bn in bridge_notes:
+        note = note_map.get(bn["note_id"])
+        if note is None:
+            continue
+        b = ensure_book(note)
+        b["bridge_note_count"] += 1
+        pair = tuple(sorted(bn["themes"]))
+        b["bridge_pairs"].add(pair)
+        for t in bn["themes"]:
+            b["themes"].add(t)
+        if len(b["sample_bridge_notes"]) < 3:
+            b["sample_bridge_notes"].append(bn["content"])
+
+    result = []
+    for b in books.values():
+        theme_count = len(b["themes"])
+        if theme_count < 2 and b["bridge_note_count"] < 2:
+            continue
+        bridge_pair_count = len(b["bridge_pairs"])
+        score = theme_count * 2 + b["bridge_note_count"] * 3 + bridge_pair_count
+        result.append({
+            "book_id": b["book_id"],
+            "title": b["title"],
+            "author": b["author"],
+            "theme_count": theme_count,
+            "themes": sorted(b["themes"]),
+            "bridge_note_count": b["bridge_note_count"],
+            "bridge_pairs": [list(p) for p in sorted(b["bridge_pairs"])],
+            "note_count": b["note_count"],
+            "cross_score": score,
+            "sample_bridge_notes": b["sample_bridge_notes"],
+        })
+
+    result.sort(key=lambda x: -x["cross_score"])
+    return result
+
+
+def _load_bridge_notes():
+    """加载桥接笔记明细缓存"""
+    loader = DataLoader()
+    path = loader.processed_dir / "noise_bridge_notes.json"
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def _prepare_bridge_graph(bridges: list[dict], min_count: int, max_nodes: int):
     """从桥接数据构建网络图所需的节点与边"""
     filtered = [b for b in bridges if b["count"] >= min_count and b["themes"][0] != b["themes"][1]]
@@ -319,7 +404,7 @@ def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: di
     return fig
 
 
-def view_noise_analysis(analysis, notes):
+def view_noise_analysis(analysis, notes, themes, book_map):
     """噪声深度分析视图"""
     st.header("🔍 噪声深度分析")
 
@@ -419,6 +504,66 @@ def view_noise_analysis(analysis, notes):
                 for note in selected.get("sample_notes", []):
                     st.markdown(f"- *{note}*")
 
+    # 跨领域书籍
+    cross_books = (analysis or {}).get("cross_domain_books")
+    if not cross_books and analysis is not None:
+        cross_books = _compute_cross_domain_books(notes, themes, _load_bridge_notes())
+    elif analysis is None:
+        cross_books = []
+
+    if cross_books:
+        st.subheader("📖 跨领域书籍")
+        st.caption(
+            "笔记横跨多个思维主题，或含大量「桥接笔记」——"
+            "这类书可能是多种认知领域的交汇点，值得重读"
+        )
+
+        min_themes = st.slider("最少涉及主题数", min_value=2, max_value=6, value=2, key="cross_book_min_themes")
+        filtered_books = [b for b in cross_books if b["theme_count"] >= min_themes]
+        st.write(f"共 **{len(filtered_books)}** 本跨领域书籍")
+
+        if filtered_books:
+            top_books = filtered_books[:15]
+            df_books = pd.DataFrame([
+                {"书名": b["title"], "交叉指数": b["cross_score"]}
+                for b in top_books
+            ])
+            fig = _horizontal_bar(
+                df_books, x="交叉指数", y="书名",
+                title_color="#7C3AED", x_label="交叉指数",
+                height=max(300, len(top_books) * 32),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            for book in filtered_books[:25]:
+                book_meta = book_map.get(book["book_id"])
+                header = (
+                    f"《{book['title']}》— {book['theme_count']} 个主题"
+                    f"，{book['bridge_note_count']} 条桥接笔记"
+                )
+                with st.expander(header):
+                    cols = st.columns([1, 3])
+                    with cols[0]:
+                        if book_meta and book_meta.cover:
+                            st.image(book_meta.cover, width=100)
+                        st.caption(f"作者: {book['author']}")
+                        st.metric("笔记数", book["note_count"])
+                        st.metric("交叉指数", book["cross_score"])
+                    with cols[1]:
+                        st.markdown("**涉及主题**")
+                        st.markdown(" ".join(f"`{t}`" for t in book["themes"]))
+                        if book.get("bridge_pairs"):
+                            st.markdown("**桥接主题对**")
+                            for pair in book["bridge_pairs"][:8]:
+                                st.markdown(f"- {pair[0]} ↔ {pair[1]}")
+                        if book.get("sample_bridge_notes"):
+                            st.markdown("**桥接笔记摘录**")
+                            for note in book["sample_bridge_notes"]:
+                                st.markdown(f"- *{note}*")
+    elif analysis is not None:
+        st.subheader("📖 跨领域书籍")
+        st.info("未识别到跨领域书籍。请重新运行 `python -m src.main analyze --mode profile` 生成完整数据。")
+
     # 噪声微主题
     micro_themes = analysis.get("micro_themes", [])
     if micro_themes:
@@ -452,9 +597,14 @@ def main():
     # 加载数据
     with st.spinner("加载数据..."):
         notes, book_map, themes, labels, coords_2d = load_data()
-        noise_analysis = load_noise_analysis()
+        noise_analysis = load_noise_analysis(_noise_analysis_mtime())
 
     # 侧边栏导航
+    if st.sidebar.button("🔄 刷新数据"):
+        load_data.clear()
+        load_noise_analysis.clear()
+        st.rerun()
+
     page = st.sidebar.radio(
         "导航",
         ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察"],
@@ -467,7 +617,7 @@ def main():
     elif page == "📚 主题列表":
         view_themes(themes, notes, book_map, labels)
     elif page == "🔍 噪声洞察":
-        view_noise_analysis(noise_analysis, notes)
+        view_noise_analysis(noise_analysis, notes, themes, book_map)
     else:
         view_notes(notes, themes, book_map, labels)
 
