@@ -12,10 +12,22 @@ import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from src.api.weread import DataLoader
 from src.data.models import Theme
+
+NOISE_ANALYSIS_PATH = project_root / "log" / "insights_output" / "noise_cross_cognitive.json"
+
+
+@st.cache_resource
+def load_noise_analysis():
+    """加载噪声深度分析结果（缓存）"""
+    if not NOISE_ANALYSIS_PATH.exists():
+        return None
+    with open(NOISE_ANALYSIS_PATH, encoding="utf-8") as f:
+        return json.load(f)
 
 
 @st.cache_resource
@@ -202,6 +214,231 @@ def view_notes(notes, themes, book_map, labels):
             st.divider()
 
 
+def _horizontal_bar(df, x, y, title_color: str, x_label: str, height: int = 450):
+    """横向柱状图，使用固定颜色避免低值过浅不可见"""
+    fig = px.bar(
+        df,
+        x=x,
+        y=y,
+        orientation="h",
+        labels={x: x_label, y: ""},
+        text=x,
+    )
+    fig.update_traces(
+        marker_color=title_color,
+        texttemplate="%{text:.1%}" if df[x].max() <= 1 else "%{text}",
+        textposition="outside",
+    )
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"},
+        height=height,
+        showlegend=False,
+    )
+    return fig
+
+
+def _prepare_bridge_graph(bridges: list[dict], min_count: int, max_nodes: int):
+    """从桥接数据构建网络图所需的节点与边"""
+    filtered = [b for b in bridges if b["count"] >= min_count and b["themes"][0] != b["themes"][1]]
+    if not filtered:
+        return [], [], {}
+
+    node_weights: dict[str, int] = {}
+    for b in filtered:
+        t0, t1 = b["themes"]
+        node_weights[t0] = node_weights.get(t0, 0) + b["count"]
+        node_weights[t1] = node_weights.get(t1, 0) + b["count"]
+
+    top_nodes = [n for n, _ in sorted(node_weights.items(), key=lambda x: -x[1])[:max_nodes]]
+    top_set = set(top_nodes)
+
+    edges = [
+        {
+            "source": b["themes"][0],
+            "target": b["themes"][1],
+            "count": b["count"],
+            "insight": b.get("insight", ""),
+            "sample_notes": b.get("sample_notes", []),
+        }
+        for b in filtered
+        if b["themes"][0] in top_set and b["themes"][1] in top_set
+    ]
+    return top_nodes, edges, node_weights
+
+
+def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: dict[str, int]):
+    """构建主题关联网络图（圆形布局，边宽=桥接强度，节点大小=活跃度）"""
+    n = len(nodes)
+    if n == 0:
+        return None
+
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    pos = {node: (np.cos(a), np.sin(a)) for node, a in zip(nodes, angles)}
+
+    max_count = max(e["count"] for e in edges) if edges else 1
+    max_weight = max(node_weights.get(node, 0) for node in nodes) or 1
+
+    fig = go.Figure()
+
+    for e in edges:
+        x0, y0 = pos[e["source"]]
+        x1, y1 = pos[e["target"]]
+        ratio = e["count"] / max_count
+        fig.add_trace(go.Scatter(
+            x=[x0, x1],
+            y=[y0, y1],
+            mode="lines",
+            line=dict(width=1.5 + 6 * ratio, color=f"rgba(22, 163, 74, {0.35 + 0.55 * ratio})"),
+            hoverinfo="text",
+            hovertext=f"{e['source']} ↔ {e['target']}<br>{e['count']} 条桥接笔记",
+            showlegend=False,
+        ))
+
+    node_sizes = [18 + 32 * node_weights.get(node, 0) / max_weight for node in nodes]
+    fig.add_trace(go.Scatter(
+        x=[pos[node][0] for node in nodes],
+        y=[pos[node][1] for node in nodes],
+        mode="markers+text",
+        marker=dict(size=node_sizes, color="#2563EB", line=dict(width=2, color="white")),
+        text=nodes,
+        textposition="top center",
+        textfont=dict(size=11),
+        hovertext=[f"{node}<br>桥接活跃度: {node_weights.get(node, 0)}" for node in nodes],
+        hoverinfo="text",
+        showlegend=False,
+    ))
+
+    fig.update_layout(
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, scaleanchor="y", scaleratio=1),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        height=620,
+        margin=dict(l=40, r=40, t=40, b=40),
+        plot_bgcolor="rgba(0,0,0,0)",
+        hovermode="closest",
+    )
+    return fig
+
+
+def view_noise_analysis(analysis, notes):
+    """噪声深度分析视图"""
+    st.header("🔍 噪声深度分析")
+
+    if analysis is None:
+        st.info("尚未运行噪声分析。请先执行：`python -m src.main analyze`")
+        return
+
+    stats = analysis["noise_stats"]
+    profile = analysis["user_profile"]
+    generated_at = analysis.get("generated_at", "")
+
+    # 概览指标
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("噪声笔记", stats["total"])
+    with col2:
+        st.metric("微主题", stats["sub_clusters"])
+    with col3:
+        st.metric("桥接模式", len(analysis.get("bridge_patterns", [])))
+    if generated_at:
+        st.caption(f"生成时间: {generated_at[:19].replace('T', ' ')}")
+
+    # 认知风格
+    cognitive = profile.get("cognitive_style", {})
+    if cognitive.get("keywords") or cognitive.get("description"):
+        st.subheader("🧠 认知风格")
+        if cognitive.get("keywords"):
+            st.markdown(" ".join(f"`{kw}`" for kw in cognitive["keywords"]))
+        if cognitive.get("description"):
+            st.markdown(cognitive["description"])
+
+    # 图表区
+    chart_col1, chart_col2 = st.columns(2)
+
+    with chart_col1:
+        st.subheader("📊 知识域分布")
+        domains = profile.get("knowledge_domains", [])[:15]
+        if domains:
+            df_domains = pd.DataFrame(domains)
+            fig = _horizontal_bar(
+                df_domains, x="weight", y="domain",
+                title_color="#2563EB", x_label="占比",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    with chart_col2:
+        st.subheader("🔗 深度领域")
+        depth = profile.get("depth_indicators", [])[:12]
+        if depth:
+            df_depth = pd.DataFrame(depth)
+            fig = _horizontal_bar(
+                df_depth, x="bridge_count", y="domain",
+                title_color="#EA580C", x_label="桥接次数",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    # 主题关联网络（替代原交叉兴趣柱状图 + 桥接洞察列表）
+    bridges = analysis.get("bridge_patterns", [])
+    if bridges:
+        st.subheader("🌉 主题关联网络")
+        st.caption("节点 = 主题，节点越大表示桥接越活跃；连线越粗表示两个主题之间的桥接笔记越多")
+
+        max_bridge_count = max(b["count"] for b in bridges)
+        ctrl_col1, ctrl_col2 = st.columns(2)
+        with ctrl_col1:
+            min_count = st.slider(
+                "最小桥接笔记数", min_value=1,
+                max_value=min(20, max_bridge_count), value=4,
+                key="bridge_min_count",
+            )
+        with ctrl_col2:
+            max_nodes = st.slider("显示主题数", min_value=8, max_value=30, value=18, key="bridge_max_nodes")
+
+        nodes, edges, node_weights = _prepare_bridge_graph(bridges, min_count, max_nodes)
+        if not edges:
+            st.warning("当前筛选条件下没有桥接关系，请降低最小桥接笔记数")
+        else:
+            fig = _bridge_network_figure(nodes, edges, node_weights)
+            st.plotly_chart(fig, use_container_width=True)
+            st.write(f"显示 **{len(nodes)}** 个主题、**{len(edges)}** 条关联")
+
+            edge_options = {
+                f"{e['source']} ↔ {e['target']} ({e['count']} 条)": e
+                for e in sorted(edges, key=lambda x: -x["count"])
+            }
+            selected_label = st.selectbox("查看桥接详情", list(edge_options.keys()), key="bridge_detail")
+            selected = edge_options[selected_label]
+
+            detail_col1, detail_col2 = st.columns([1, 1])
+            with detail_col1:
+                st.markdown(f"**{selected['source']}** ↔ **{selected['target']}**")
+                st.metric("桥接笔记数", selected["count"])
+                if selected.get("insight"):
+                    st.info(selected["insight"])
+            with detail_col2:
+                st.markdown("**代表性笔记**")
+                for note in selected.get("sample_notes", []):
+                    st.markdown(f"- *{note}*")
+
+    # 噪声微主题
+    micro_themes = analysis.get("micro_themes", [])
+    if micro_themes:
+        st.subheader("🔬 噪声微主题")
+        note_map = {n.id: n for n in notes}
+        for mt in micro_themes:
+            with st.expander(f"**{mt['label']}** ({mt['size']} 条)"):
+                for content in mt.get("sample_notes", []):
+                    st.markdown(f"- *{content}*")
+                note_ids = mt.get("note_ids", [])
+                if note_ids:
+                    books = sorted({
+                        note_map[nid].book_title
+                        for nid in note_ids[:50]
+                        if nid in note_map
+                    })
+                    if books:
+                        st.caption(f"涉及书籍: {', '.join(books[:8])}{'...' if len(books) > 8 else ''}")
+
+
 def main():
     """主函数"""
     st.set_page_config(
@@ -215,11 +452,12 @@ def main():
     # 加载数据
     with st.spinner("加载数据..."):
         notes, book_map, themes, labels, coords_2d = load_data()
+        noise_analysis = load_noise_analysis()
 
     # 侧边栏导航
     page = st.sidebar.radio(
         "导航",
-        ["📊 概览", "📚 主题列表", "📝 笔记详情"],
+        ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察"],
         label_visibility="collapsed",
     )
 
@@ -228,6 +466,8 @@ def main():
         view_overview(notes, themes, labels, coords_2d)
     elif page == "📚 主题列表":
         view_themes(themes, notes, book_map, labels)
+    elif page == "🔍 噪声洞察":
+        view_noise_analysis(noise_analysis, notes)
     else:
         view_notes(notes, themes, book_map, labels)
 
