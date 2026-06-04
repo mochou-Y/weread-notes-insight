@@ -1,0 +1,515 @@
+"""噪声深度分析模块 — 从多主题交叉区挖掘交叉知识与用户画像"""
+
+import json
+import random
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+import hdbscan
+import numpy as np
+from openai import OpenAI
+
+from config.settings import settings
+from src.api.weread import DataLoader
+from src.clustering.cluster import ThemeLabeler
+from src.data.models import Note, Theme
+
+
+class NoiseAnalyzer:
+    """噪声深度分析器
+
+    对 HDBSCAN 标记为噪声（label=-1）的笔记进行三层挖掘：
+    1. 子聚类 — 发现噪声内部的微主题
+    2. 桥接分析 — 发现噪声笔记与已有主题的交叉关系
+    3. 用户画像 — 综合产出结构化的用户认知画像
+    """
+
+    def __init__(
+        self,
+        bridge_threshold: float = 0.6,
+        bridge_top_k: int = 3,
+        subcluster_min_size: int = 3,
+        subcluster_min_samples: int = 2,
+    ):
+        self.bridge_threshold = bridge_threshold
+        self.bridge_top_k = bridge_top_k
+        self.subcluster_min_size = subcluster_min_size
+        self.subcluster_min_samples = subcluster_min_samples
+
+        self.loader = DataLoader()
+        self.labeler = ThemeLabeler()
+        self.client = OpenAI(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+        )
+
+        # load_data() 后填充
+        self.notes: list[Note] = []
+        self.embeddings: Optional[np.ndarray] = None
+        self.labels: Optional[np.ndarray] = None
+        self.themes: list[Theme] = []
+        self.noise_indices: Optional[np.ndarray] = None
+
+    def load_data(self):
+        """加载全部所需数据"""
+        print("加载数据...")
+
+        # 加载并过滤笔记
+        all_notes = self.loader.load_all_notes()
+        self.notes = [
+            n for n in all_notes
+            if n.type != "bookmark"
+            and n.content.strip()
+            and "[插图]" not in n.content
+            and "[插图]" not in (n.context or "")
+        ]
+
+        # 加载 embedding
+        from src.embedding.embedder import EmbeddingStorage
+
+        storage = EmbeddingStorage()
+        self.embeddings = storage.load()
+        if self.embeddings is None:
+            print("错误: 没有找到 embedding 数据，请先运行 embedding 命令")
+            return False
+
+        # 加载 labels
+        labels_path = self.loader.processed_dir / "labels.npy"
+        if not labels_path.exists():
+            print("错误: 没有找到 labels 数据，请先运行 cluster 命令")
+            return False
+        self.labels = np.load(labels_path)
+
+        # 加载 themes
+        themes_path = self.loader.processed_dir / "themes.json"
+        if not themes_path.exists():
+            print("错误: 没有找到 themes 数据，请先运行 cluster 命令")
+            return False
+        with open(themes_path, encoding="utf-8") as f:
+            themes_data = json.load(f)
+        self.themes = [Theme(**t) for t in themes_data["themes"]]
+
+        # 对齐数据
+        min_len = min(len(self.labels), len(self.notes), len(self.embeddings))
+        self.labels = self.labels[:min_len]
+        self.notes = self.notes[:min_len]
+        self.embeddings = self.embeddings[:min_len]
+
+        # 提取噪声索引
+        self.noise_indices = np.where(self.labels == -1)[0]
+        print(f"笔记总数: {min_len}, 噪声笔记: {len(self.noise_indices)}")
+
+        return True
+
+    # ---- Step 1: 子聚类 ----
+
+    def subcluster_noise(self) -> list[dict]:
+        """对噪声笔记单独聚类，发现内部微主题"""
+        print("\n=== 噪声子聚类 ===")
+
+        noise_emb = self.embeddings[self.noise_indices]
+        noise_notes = [self.notes[i] for i in self.noise_indices]
+
+        print(f"噪声 embedding 形状: {noise_emb.shape}")
+        print(f"HDBSCAN 参数: min_cluster_size={self.subcluster_min_size}, min_samples={self.subcluster_min_samples}")
+
+        clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=self.subcluster_min_size,
+            min_samples=self.subcluster_min_samples,
+            metric="euclidean",
+        )
+        sub_labels = clusterer.fit_predict(noise_emb)
+
+        unique_labels = sorted(set(sub_labels) - {-1})
+        n_sub = len(unique_labels)
+        still_noise = (sub_labels == -1).sum()
+        print(f"发现 {n_sub} 个微主题, 仍有 {still_noise} 条未归类")
+
+        # 分组并标注
+        micro_themes = []
+        for cid in unique_labels:
+            mask = sub_labels == cid
+            cluster_indices = np.where(mask)[0]
+            cluster_notes = [noise_notes[i] for i in cluster_indices]
+
+            # 标注
+            try:
+                label = self.labeler.label_theme_by_tfidf(cluster_notes)
+            except Exception:
+                label = f"微主题_{cid}"
+
+            # 取样本
+            sample_size = min(5, len(cluster_notes))
+            samples = random.sample(cluster_notes, sample_size)
+            sample_contents = [n.content[:200] for n in samples]
+
+            micro_themes.append({
+                "id": f"noise_theme_{cid}",
+                "label": label,
+                "size": len(cluster_notes),
+                "note_ids": [n.id for n in cluster_notes],
+                "sample_notes": sample_contents,
+            })
+            print(f"  - {label}: {len(cluster_notes)} 条")
+
+        # 按大小降序
+        micro_themes.sort(key=lambda x: x["size"], reverse=True)
+
+        # 缓存
+        self._save_cache("noise_micro_themes.json", micro_themes)
+
+        return micro_themes
+
+    # ---- Step 2: 桥接分析 ----
+
+    def analyze_bridges(self) -> list[dict]:
+        """分析噪声笔记与已有主题的桥接关系"""
+        print("\n=== 交叉桥分析 ===")
+
+        # 构建主题质心
+        note_id_to_idx = {n.id: i for i, n in enumerate(self.notes)}
+        theme_centroids = {}
+        theme_labels = {}
+
+        for theme in self.themes:
+            indices = [note_id_to_idx[nid] for nid in theme.note_ids if nid in note_id_to_idx]
+            if not indices:
+                continue
+            emb = self.embeddings[indices]
+            centroid = emb.mean(axis=0)
+            # 归一化
+            norm = np.linalg.norm(centroid)
+            if norm > 0:
+                centroid = centroid / norm
+            theme_centroids[theme.id] = centroid
+            theme_labels[theme.id] = theme.label
+
+        print(f"计算了 {len(theme_centroids)} 个主题质心")
+
+        # 噪声 embedding 归一化
+        noise_emb = self.embeddings[self.noise_indices]
+        norms = np.linalg.norm(noise_emb, axis=1, keepdims=True)
+        norms[norms == 0] = 1
+        noise_emb_normed = noise_emb / norms
+
+        # 计算每个噪声笔记与所有质心的余弦相似度
+        centroid_matrix = np.array([theme_centroids[tid] for tid in theme_centroids])
+        theme_ids_ordered = list(theme_centroids.keys())
+        sim_matrix = noise_emb_normed @ centroid_matrix.T  # (n_noise, n_themes)
+
+        # 识别桥接笔记
+        bridge_pair_counter = Counter()
+        bridge_notes_map: dict[str, list[dict]] = {}
+
+        for i in range(len(self.noise_indices)):
+            sims = sim_matrix[i]
+            top_k_indices = np.argsort(sims)[-self.bridge_top_k:][::-1]
+            top_k_sims = sims[top_k_indices]
+
+            # 筛选超过阈值的主题
+            qualified = [
+                (theme_ids_ordered[top_k_indices[j]], top_k_sims[j])
+                for j in range(len(top_k_indices))
+                if top_k_sims[j] >= self.bridge_threshold
+            ]
+
+            if len(qualified) >= 2:
+                # 取前2个形成桥接对
+                pair = tuple(sorted([theme_labels[qualified[0][0]], theme_labels[qualified[1][0]]]))
+                bridge_pair_counter[pair] += 1
+                if pair not in bridge_notes_map:
+                    bridge_notes_map[pair] = []
+                note = self.notes[self.noise_indices[i]]
+                bridge_notes_map[pair].append({
+                    "note_id": note.id,
+                    "content": note.content[:200],
+                    "similarities": {
+                        theme_labels[tid]: round(float(sim), 3)
+                        for tid, sim in qualified[:2]
+                    },
+                })
+
+        # 排序并构建结果
+        bridges = []
+        top_n_for_llm = 10  # 只对 top N 桥接对调用 LLM
+        min_bridge_count = 4  # 过滤低频桥接对
+        sorted_pairs = [(p, c) for p, c in bridge_pair_counter.most_common() if c >= min_bridge_count]
+
+        for idx, (pair, count) in enumerate(sorted_pairs):
+            notes_for_llm = bridge_notes_map[pair][:5]
+
+            # 只对 top N 做较深的 LLM 分析
+            if idx < top_n_for_llm:
+                insight = self._llm_bridge_insight(pair, notes_for_llm)
+            else:
+                insight = ""
+
+            bridges.append({
+                "themes": list(pair),
+                "count": count,
+                "insight": insight,
+                "sample_notes": [n["content"] for n in notes_for_llm],
+            })
+            print(f"  - {pair[0]} <-> {pair[1]}: {count} 条桥接笔记")
+
+        print(f"共发现 {len(bridges)} 个桥接模式")
+
+        # 缓存
+        self._save_cache("noise_bridges.json", bridges)
+
+        return bridges
+
+    # ---- Step 3: 用户画像 ----
+
+    def build_user_profile(self, micro_themes: list[dict], bridges: list[dict]) -> dict:
+        """综合微主题和桥接分析，构建多维用户画像"""
+        print("\n=== 构建用户画像 ===")
+
+        # 知识域分布
+        domain_weights = {}
+        # 已有主题
+        for theme in self.themes:
+            domain_weights[theme.label] = len(theme.note_ids)
+        # 噪声微主题
+        for mt in micro_themes:
+            domain_weights[f"[交叉] {mt['label']}"] = mt["size"]
+
+        total = sum(domain_weights.values())
+        knowledge_domains = [
+            {"domain": d, "weight": round(c / total, 3)}
+            for d, c in sorted(domain_weights.items(), key=lambda x: -x[1])
+        ]
+
+        # 交叉兴趣
+        cross_interests = [
+            {"pair": b["themes"], "strength": round(b["count"] / len(self.noise_indices), 3)}
+            for b in bridges
+        ]
+
+        # 深度指标：每个主题被桥接的次数
+        depth_counter = Counter()
+        for b in bridges:
+            for t in b["themes"]:
+                depth_counter[t] += b["count"]
+        depth_indicators = [
+            {"domain": d, "bridge_count": c}
+            for d, c in depth_counter.most_common()
+        ]
+
+        # 认知风格 LLM 分析
+        cognitive_style = self._llm_cognitive_style(micro_themes, bridges)
+
+        profile = {
+            "noise_stats": {
+                "total": int(len(self.noise_indices)),
+                "sub_clusters": len(micro_themes),
+            },
+            "micro_themes": micro_themes,
+            "bridge_patterns": bridges,
+            "user_profile": {
+                "knowledge_domains": knowledge_domains,
+                "cross_interests": cross_interests,
+                "cognitive_style": cognitive_style,
+                "depth_indicators": depth_indicators,
+            },
+            "generated_at": datetime.now().isoformat(),
+        }
+
+        # 保存最终结果
+        output_dir = Path("log/insights_output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "noise_cross_cognitive.json"
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(profile, f, ensure_ascii=False, indent=2)
+        print(f"结果已保存到 {output_path}")
+
+        # 同时保存可读文本
+        self._print_profile(profile)
+
+        return profile
+
+    # ---- 主流程 ----
+
+    def run(self, mode: str = "all"):
+        """运行分析，支持 subcluster / bridge / profile / all"""
+        if not self.load_data():
+            return
+
+        micro_themes = None
+        bridges = None
+
+        if mode in ("subcluster", "all"):
+            micro_themes = self.subcluster_noise()
+
+        if mode in ("bridge", "all"):
+            bridges = self.analyze_bridges()
+
+        if mode in ("profile", "all"):
+            # profile 依赖前两步，尝试从缓存加载
+            if micro_themes is None:
+                micro_themes = self._load_cache("noise_micro_themes.json")
+                if micro_themes is None:
+                    print("错误: 请先运行 subcluster 模式或 all 模式")
+                    return
+            if bridges is None:
+                bridges = self._load_cache("noise_bridges.json")
+                if bridges is None:
+                    print("错误: 请先运行 bridge 模式或 all 模式")
+                    return
+            self.build_user_profile(micro_themes, bridges)
+
+    # ---- LLM 辅助 ----
+
+    def _llm_bridge_insight(self, pair: tuple[str, str], sample_notes: list[dict]) -> str:
+        """用 LLM 分析桥接对的交叉含义"""
+        notes_text = "\n".join(f"- {n['content']}" for n in sample_notes)
+        prompt = f"""以下笔记同时涉及「{pair[0]}」和「{pair[1]}」两个领域。请用一两句话分析这两个领域在这位读者的思维中是如何交叉的，交叉点反映了什么深层的认知倾向。
+
+笔记内容：
+{notes_text}
+
+请直接输出分析，不要有其他格式。"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            return f"分析失败: {e}"
+
+    def _llm_cognitive_style(self, micro_themes: list[dict], bridges: list[dict]) -> dict:
+        """用 LLM 分析认知风格"""
+        # 收集代表性内容
+        theme_labels = [mt["label"] for mt in micro_themes[:10]]
+        bridge_pairs = [f"{b['themes'][0]} <-> {b['themes'][1]}" for b in bridges[:8]]
+        sample_contents = []
+        for mt in micro_themes[:5]:
+            sample_contents.extend(mt["sample_notes"][:2])
+        for b in bridges[:3]:
+            sample_contents.extend(b["sample_notes"][:2])
+
+        notes_text = "\n".join(f"- {c}" for c in sample_contents[:20])
+
+        prompt = f"""基于以下分析结果，请总结这位读者的认知风格。
+
+噪声中的微主题: {', '.join(theme_labels)}
+跨领域桥接模式: {', '.join(bridge_pairs)}
+代表性笔记:
+{notes_text}
+
+请按以下格式回复：
+认知关键词: [3-5个关键词，用逗号分隔]
+认知风格说明: [一段话，描述这位读者的思维特点、关注倾向和深层认知模式]"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=300,
+            )
+            text = response.choices[0].message.content.strip()
+
+            keywords = []
+            description = ""
+            for line in text.split("\n"):
+                if line.startswith("认知关键词"):
+                    kw_str = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+                    keywords = [k.strip() for k in kw_str.split(",") if k.strip()]
+                elif line.startswith("认知风格说明"):
+                    description = line.split(":", 1)[-1].strip() if ":" in line else line.split("：", 1)[-1].strip()
+
+            if not description:
+                description = text
+
+            return {"keywords": keywords, "description": description}
+        except Exception as e:
+            return {"keywords": [], "description": f"分析失败: {e}"}
+
+    # ---- 缓存辅助 ----
+
+    def _save_cache(self, filename: str, data):
+        path = self.loader.processed_dir / filename
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"缓存已保存到 {path}")
+
+    def _load_cache(self, filename: str):
+        path = self.loader.processed_dir / filename
+        if not path.exists():
+            return None
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+
+    # ---- 打印摘要 ----
+
+    def _print_profile(self, profile: dict):
+        """打印可读的用户画像摘要"""
+        up = profile["user_profile"]
+
+        print("\n" + "=" * 60)
+        print("用户画像摘要")
+        print("=" * 60)
+
+        print(f"\n噪声笔记: {profile['noise_stats']['total']} 条 → {profile['noise_stats']['sub_clusters']} 个微主题")
+
+        print("\n--- 知识域 Top 10 ---")
+        for d in up["knowledge_domains"][:10]:
+            print(f"  {d['domain']}: {d['weight']:.1%}")
+
+        print("\n--- 交叉兴趣 Top 5 ---")
+        for ci in up["cross_interests"][:5]:
+            print(f"  {ci['pair'][0]} <-> {ci['pair'][1]}: {ci['strength']:.1%}")
+
+        print("\n--- 深度领域 ---")
+        for di in up["depth_indicators"][:5]:
+            print(f"  {di['domain']}: {di['bridge_count']} 次桥接")
+
+        if up["cognitive_style"]["keywords"]:
+            print(f"\n--- 认知风格 ---")
+            print(f"  关键词: {', '.join(up['cognitive_style']['keywords'])}")
+            print(f"  {up['cognitive_style']['description']}")
+
+        # 保存文本版本
+        import io
+        buf = io.StringIO()
+        buf.write(f"噪声笔记深度分析\n")
+        buf.write(f"生成时间: {profile['generated_at']}\n\n")
+        buf.write(f"噪声笔记: {profile['noise_stats']['total']} 条 → {profile['noise_stats']['sub_clusters']} 个微主题\n\n")
+
+        buf.write("=== 知识域分布 ===\n")
+        for d in up["knowledge_domains"][:15]:
+            buf.write(f"  {d['domain']}: {d['weight']:.1%}\n")
+
+        buf.write("\n=== 交叉兴趣 ===\n")
+        for ci in up["cross_interests"][:10]:
+            buf.write(f"  {ci['pair'][0]} <-> {ci['pair'][1]}: {ci['strength']:.1%}\n")
+
+        buf.write("\n=== 深度领域 ===\n")
+        for di in up["depth_indicators"][:10]:
+            buf.write(f"  {di['domain']}: {di['bridge_count']} 次桥接\n")
+
+        buf.write("\n=== 认知风格 ===\n")
+        if up["cognitive_style"]["keywords"]:
+            buf.write(f"  关键词: {', '.join(up['cognitive_style']['keywords'])}\n")
+        buf.write(f"  {up['cognitive_style']['description']}\n")
+
+        buf.write("\n=== 桥接洞察 ===\n")
+        for b in profile["bridge_patterns"][:10]:
+            buf.write(f"\n{b['themes'][0]} <-> {b['themes'][1]} ({b['count']}条)\n")
+            buf.write(f"  {b['insight']}\n")
+
+        buf.write("\n=== 噪声微主题 ===\n")
+        for mt in profile["micro_themes"][:15]:
+            buf.write(f"  {mt['label']}: {mt['size']}条\n")
+
+        output_dir = Path("log/insights_output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        txt_path = output_dir / "noise_cross_cognitive.txt"
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(buf.getvalue())
+        print(f"\n文本摘要已保存到 {txt_path}")

@@ -380,6 +380,20 @@ def cmd_status(args):
     print("=" * 50)
 
 
+def cmd_analyze(args):
+    """噪声深度分析命令"""
+    print("开始噪声深度分析...")
+
+    if not settings.openai_api_key:
+        print("错误: 请设置环境变量 OPENAI_API_KEY")
+        sys.exit(1)
+
+    from src.analyze.noise_analyzer import NoiseAnalyzer
+
+    analyzer = NoiseAnalyzer()
+    analyzer.run(mode=args.mode)
+
+
 def cmd_serve(args):
     """启动可视化服务"""
     import subprocess
@@ -428,6 +442,12 @@ def main():
     graph_parser = subparsers.add_parser("graph", help="生成主题图谱")
     graph_parser.add_argument("--output", type=str, default="graph.html", help="输出文件名")
 
+    # analyze 命令
+    analyze_parser = subparsers.add_parser("analyze", help="噪声深度分析")
+    analyze_parser.add_argument("--mode", type=str, default="all",
+                                choices=["subcluster", "bridge", "profile", "all"],
+                                help="分析模式: subcluster(子聚类), bridge(桥接分析), profile(用户画像), all(全部)")
+
     # status 命令
     status_parser = subparsers.add_parser("status", help="查看数据状态")
 
@@ -447,6 +467,8 @@ def main():
         cmd_evaluate(args)
     elif args.command == "graph":
         cmd_graph(args)
+    elif args.command == "analyze":
+        cmd_analyze(args)
     elif args.command == "status":
         cmd_status(args)
     elif args.command == "serve":
