@@ -381,13 +381,20 @@ def cmd_status(args):
 
 
 def cmd_analyze(args):
-    """噪声深度分析命令"""
-    print("开始噪声深度分析...")
-
+    """深度分析命令（噪声 / 时间演变）"""
     if not settings.openai_api_key:
         print("错误: 请设置环境变量 OPENAI_API_KEY")
         sys.exit(1)
 
+    if args.mode == "temporal":
+        print("开始时间维度分析...")
+        from src.analyze.temporal_analyzer import TemporalAnalyzer
+
+        analyzer = TemporalAnalyzer()
+        analyzer.run()
+        return
+
+    print("开始噪声深度分析...")
     from src.analyze.noise_analyzer import NoiseAnalyzer
 
     analyzer = NoiseAnalyzer()
@@ -445,8 +452,8 @@ def main():
     # analyze 命令
     analyze_parser = subparsers.add_parser("analyze", help="噪声深度分析")
     analyze_parser.add_argument("--mode", type=str, default="all",
-                                choices=["subcluster", "bridge", "profile", "all"],
-                                help="分析模式: subcluster(子聚类), bridge(桥接分析), profile(用户画像), all(全部)")
+                                choices=["subcluster", "bridge", "profile", "all", "temporal"],
+                                help="分析模式: subcluster(子聚类), bridge(桥接分析), profile(用户画像), all(全部), temporal(时间演变)")
 
     # status 命令
     status_parser = subparsers.add_parser("status", help="查看数据状态")

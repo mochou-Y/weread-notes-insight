@@ -19,6 +19,7 @@ from src.api.weread import DataLoader
 from src.data.models import Theme
 
 NOISE_ANALYSIS_PATH = project_root / "log" / "insights_output" / "noise_cross_cognitive.json"
+TEMPORAL_ANALYSIS_PATH = project_root / "log" / "insights_output" / "temporal_evolution.json"
 
 
 def _noise_analysis_mtime() -> float:
@@ -34,6 +35,21 @@ def load_noise_analysis(_mtime: float):
     if not NOISE_ANALYSIS_PATH.exists():
         return None
     with open(NOISE_ANALYSIS_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _temporal_analysis_mtime() -> float:
+    if TEMPORAL_ANALYSIS_PATH.exists():
+        return TEMPORAL_ANALYSIS_PATH.stat().st_mtime
+    return 0.0
+
+
+@st.cache_data(show_spinner=False)
+def load_temporal_analysis(_mtime: float):
+    """加载时间维度分析结果"""
+    if not TEMPORAL_ANALYSIS_PATH.exists():
+        return None
+    with open(TEMPORAL_ANALYSIS_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -630,6 +646,193 @@ def view_noise_analysis(analysis, notes, themes, book_map):
                         st.caption(f"涉及书籍: {', '.join(books[:8])}{'...' if len(books) > 8 else ''}")
 
 
+def view_temporal(analysis):
+    """时间演变视图"""
+    st.header("📈 时间演变")
+
+    if analysis is None:
+        st.info("尚未运行时间分析。请先执行：`python -m src.main analyze --mode temporal`")
+        return
+
+    periods = analysis.get("periods", [])
+    generated_at = analysis.get("generated_at", "")
+    granularity = analysis.get("granularity", "quarter")
+    drift_score = analysis.get("drift_score", 0)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("时段数", len(periods))
+    with col2:
+        st.metric("主题漂移度", f"{drift_score:.2f}")
+    with col3:
+        gran_label = {"quarter": "季度", "month": "月", "year": "年"}.get(granularity, granularity)
+        st.metric("时间粒度", gran_label)
+    if generated_at:
+        st.caption(f"生成时间: {generated_at[:19].replace('T', ' ')}")
+    if periods:
+        st.caption(f"时间范围: {periods[0]} ~ {periods[-1]}")
+
+    # LLM 叙事
+    narrative = analysis.get("narrative", {})
+    if narrative.get("unchanged") or narrative.get("shifts") or narrative.get("clues"):
+        st.subheader("📖 演变叙事")
+        if narrative.get("error"):
+            st.warning(f"LLM 叙事部分失败: {narrative.get('clues', '')}")
+        n_col1, n_col2, n_col3 = st.columns(3)
+        with n_col1:
+            st.markdown("**不变的底色**")
+            st.markdown(narrative.get("unchanged") or "—")
+        with n_col2:
+            st.markdown("**明显的转向**")
+            st.markdown(narrative.get("shifts") or "—")
+        with n_col3:
+            st.markdown("**可能的内在线索**")
+            st.markdown(narrative.get("clues") or "—")
+
+    # 变与不变卡片
+    stability = analysis.get("stability", {})
+    st.subheader("🔄 变与不变")
+    s_col1, s_col2, s_col3, s_col4 = st.columns(4)
+    with s_col1:
+        st.markdown("**稳定核**")
+        for item in stability.get("core", [])[:8]:
+            st.markdown(f"- `{item['theme']}` ({item['global_mean']:.1%})")
+        if not stability.get("core"):
+            st.caption("暂无")
+    with s_col2:
+        st.markdown("**新兴**")
+        for item in stability.get("emerging", [])[:8]:
+            fh = item.get("first_half", 0)
+            sh = item.get("second_half", 0)
+            st.markdown(f"- `{item['theme']}` ({fh:.1%} → {sh:.1%})")
+        if not stability.get("emerging"):
+            st.caption("暂无")
+    with s_col3:
+        st.markdown("**淡出**")
+        for item in stability.get("fading", [])[:8]:
+            fh = item.get("first_half", 0)
+            sh = item.get("second_half", 0)
+            st.markdown(f"- `{item['theme']}` ({fh:.1%} → {sh:.1%})")
+        if not stability.get("fading"):
+            st.caption("暂无")
+    with s_col4:
+        st.markdown("**阶段性**")
+        for item in stability.get("spike", [])[:8]:
+            peak = item.get("peak_period", "")
+            st.markdown(f"- `{item['theme']}` @ {peak}")
+        if not stability.get("spike"):
+            st.caption("暂无")
+
+    # 阅读强度
+    intensity = analysis.get("intensity", [])
+    if intensity:
+        st.subheader("📊 阅读强度")
+        df_int = pd.DataFrame(intensity)
+        fig_int = go.Figure()
+        fig_int.add_trace(go.Bar(
+            x=df_int["period"],
+            y=df_int["highlight_count"],
+            name="划线",
+            marker_color="#93C5FD",
+        ))
+        fig_int.add_trace(go.Bar(
+            x=df_int["period"],
+            y=df_int["review_count"],
+            name="想法",
+            marker_color="#2563EB",
+        ))
+        fig_int.update_layout(
+            barmode="stack",
+            xaxis_title="时段",
+            yaxis_title="笔记数",
+            height=380,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        )
+        st.plotly_chart(fig_int, use_container_width=True)
+
+    chart_col1, chart_col2 = st.columns(2)
+
+    theme_timeline = analysis.get("theme_timeline", [])
+    top_n = st.slider("热力图/趋势线主题数", min_value=5, max_value=20, value=12, key="temporal_top_n")
+
+    with chart_col1:
+        st.subheader("🌡️ 主题热力图")
+        if theme_timeline and periods:
+            top_themes = theme_timeline[:top_n]
+            z = [t["weights"] for t in top_themes]
+            y_labels = [t["theme"] for t in top_themes]
+            fig_heat = go.Figure(data=go.Heatmap(
+                z=z,
+                x=periods,
+                y=y_labels,
+                colorscale="Blues",
+                zmin=0,
+                zmax=max(max(row) for row in z) if z else 1,
+                hovertemplate="时段: %{x}<br>主题: %{y}<br>占比: %{z:.1%}<extra></extra>",
+            ))
+            fig_heat.update_layout(
+                xaxis_title="时段",
+                height=max(400, top_n * 28),
+                margin=dict(l=120),
+            )
+            st.plotly_chart(fig_heat, use_container_width=True)
+
+    with chart_col2:
+        st.subheader("📈 主题趋势线")
+        if theme_timeline and periods:
+            fig_line = go.Figure()
+            highlight_themes = set()
+            for bucket in ("core", "emerging", "fading"):
+                for item in stability.get(bucket, [])[:3]:
+                    highlight_themes.add(item["theme"])
+
+            colors = px.colors.qualitative.Set2
+            for i, item in enumerate(theme_timeline[:top_n]):
+                theme = item["theme"]
+                width = 3 if theme in highlight_themes else 1
+                dash = "solid" if theme in highlight_themes else "dot"
+                fig_line.add_trace(go.Scatter(
+                    x=periods,
+                    y=item["weights"],
+                    mode="lines+markers",
+                    name=theme,
+                    line=dict(width=width, dash=dash, color=colors[i % len(colors)]),
+                    hovertemplate="%{x}<br>%{y:.1%}<extra>" + theme + "</extra>",
+                ))
+            fig_line.update_layout(
+                xaxis_title="时段",
+                yaxis_tickformat=".0%",
+                height=max(400, min(top_n, 8) * 40),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.35),
+                margin=dict(b=100),
+            )
+            st.plotly_chart(fig_line, use_container_width=True)
+
+    # 时段详情
+    period_details = analysis.get("period_details", [])
+    if period_details:
+        st.subheader("🗓️ 时段详情")
+        period_options = {d["period"]: d for d in period_details}
+        selected = st.selectbox("选择时段", list(period_options.keys()), key="temporal_period")
+        detail = period_options[selected]
+
+        t_col1, t_col2 = st.columns([1, 2])
+        with t_col1:
+            st.markdown("**Top 主题**")
+            for t in detail.get("top_themes", []):
+                st.markdown(f"- `{t['theme']}` — {t['weight']:.1%}")
+        with t_col2:
+            st.markdown("**代表性笔记**")
+            for note in detail.get("sample_notes", []):
+                type_label = "想法" if note["type"] == "review" else "划线"
+                st.markdown(
+                    f"- *{note['content'][:150]}{'...' if len(note['content']) > 150 else ''}*"
+                )
+                st.caption(
+                    f"《{note['book_title']}》 | {type_label} | {note['theme']} | {note['create_time']}"
+                )
+
+
 def main():
     """主函数"""
     st.set_page_config(
@@ -640,7 +843,7 @@ def main():
 
     st.title("📚 微信读书笔记主题洞察")
 
-    pages = ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察"]
+    pages = ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察", "📈 时间演变"]
 
     # 侧边栏导航（放在刷新按钮之前，并用 key 持久化选中页）
     page = st.sidebar.radio(
@@ -653,12 +856,14 @@ def main():
     if st.sidebar.button("🔄 刷新数据"):
         load_data.clear()
         load_noise_analysis.clear()
+        load_temporal_analysis.clear()
         st.rerun()
 
     # 加载数据
     with st.spinner("加载数据..."):
         notes, book_map, themes, labels, coords_2d = load_data()
         noise_analysis = load_noise_analysis(_noise_analysis_mtime())
+        temporal_analysis = load_temporal_analysis(_temporal_analysis_mtime())
 
     # 页面切换
     if page == "📊 概览":
@@ -667,6 +872,8 @@ def main():
         view_themes(themes, notes, book_map, labels)
     elif page == "🔍 噪声洞察":
         view_noise_analysis(noise_analysis, notes, themes, book_map)
+    elif page == "📈 时间演变":
+        view_temporal(temporal_analysis)
     else:
         view_notes(notes, themes, book_map, labels)
 
