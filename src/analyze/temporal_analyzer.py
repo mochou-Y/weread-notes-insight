@@ -211,6 +211,7 @@ class TemporalAnalyzer:
             return {"core": [], "emerging": [], "fading": [], "spike": []}
 
         mid = max(1, n // 2)
+        recent_window = max(2, min(4, n // 3 or 1))
         core, emerging, fading, spike = [], [], [], []
 
         for item in theme_timeline:
@@ -223,8 +224,8 @@ class TemporalAnalyzer:
             cv = float(weights.std() / global_mean) if global_mean > 0 else 999.0
             first_half = float(weights[:mid].mean())
             second_half = float(weights[mid:].mean())
-            slope = float(weights[-1] - weights[0]) if n > 1 else 0.0
-
+            early = float(weights[:recent_window].mean())
+            recent = float(weights[-recent_window:].mean())
             above_threshold = sum(1 for w in weights if w > global_mean * 0.5)
             peak = float(weights.max())
             peak_periods = sum(1 for w in weights if w > global_mean * 1.5)
@@ -234,15 +235,26 @@ class TemporalAnalyzer:
             if peak > global_mean * 3 and peak_periods <= 2 and global_mean > 0.01:
                 entry["peak_period"] = periods[int(weights.argmax())]
                 spike.append(entry)
-            elif above_threshold >= max(1, int(n * 0.7)) and cv < 0.8 and global_mean > 0.02:
+
+            if above_threshold >= max(1, int(n * 0.7)) and cv < 0.8 and global_mean > 0.02:
                 core.append(entry)
-            elif first_half < 0.02 and second_half > 0.05 and slope > 0:
+            elif (
+                second_half > first_half * 1.5 and second_half > 0.015
+            ) or (
+                recent > early * 2.0 and recent > 0.015
+            ):
                 entry["first_half"] = round(first_half, 4)
                 entry["second_half"] = round(second_half, 4)
+                entry["recent"] = round(recent, 4)
                 emerging.append(entry)
-            elif first_half > 0.05 and second_half < 0.02 and slope < 0:
+            elif (
+                first_half > second_half * 1.5 and first_half > 0.015
+            ) or (
+                early > recent * 2.0 and early > 0.015
+            ):
                 entry["first_half"] = round(first_half, 4)
                 entry["second_half"] = round(second_half, 4)
+                entry["recent"] = round(recent, 4)
                 fading.append(entry)
 
         for bucket in (core, emerging, fading, spike):

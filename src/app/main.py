@@ -30,7 +30,7 @@ def _noise_analysis_mtime() -> float:
 
 
 @st.cache_data(show_spinner=False)
-def load_noise_analysis(_mtime: float):
+def load_noise_analysis(mtime: float):
     """加载噪声深度分析结果（文件更新后自动刷新）"""
     if not NOISE_ANALYSIS_PATH.exists():
         return None
@@ -45,7 +45,7 @@ def _temporal_analysis_mtime() -> float:
 
 
 @st.cache_data(show_spinner=False)
-def load_temporal_analysis(_mtime: float):
+def load_temporal_analysis(mtime: float):
     """加载时间维度分析结果"""
     if not TEMPORAL_ANALYSIS_PATH.exists():
         return None
@@ -664,6 +664,7 @@ def view_temporal(analysis):
         st.metric("时段数", len(periods))
     with col2:
         st.metric("主题漂移度", f"{drift_score:.2f}")
+        st.caption("0-1 之间，越接近 0 表示相邻时段主题越稳定；越接近 1 表示兴趣结构变化越明显。")
     with col3:
         gran_label = {"quarter": "季度", "month": "月", "year": "年"}.get(granularity, granularity)
         st.metric("时间粒度", gran_label)
