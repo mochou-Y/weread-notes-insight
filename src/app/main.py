@@ -658,6 +658,19 @@ def view_temporal(analysis):
     generated_at = analysis.get("generated_at", "")
     granularity = analysis.get("granularity", "quarter")
     drift_score = analysis.get("drift_score", 0)
+    stability = analysis.get("stability", {})
+    intensity = analysis.get("intensity", [])
+    theme_timeline = analysis.get("theme_timeline", [])
+    period_details = analysis.get("period_details", [])
+    significant_shifts = analysis.get("significant_shifts", [])
+    period_options = {d["period"]: d for d in period_details}
+
+    if periods:
+        if st.session_state.get("temporal_focus_period") not in periods:
+            st.session_state.temporal_focus_period = periods[-1]
+        focus_idx = periods.index(st.session_state.temporal_focus_period)
+    else:
+        focus_idx = 0
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -672,6 +685,138 @@ def view_temporal(analysis):
         st.caption(f"生成时间: {generated_at[:19].replace('T', ' ')}")
     if periods:
         st.caption(f"时间范围: {periods[0]} ~ {periods[-1]}")
+
+        nav_col1, nav_col2, nav_col3 = st.columns([1, 5, 1])
+        with nav_col1:
+            if st.button("← 上一期", disabled=focus_idx == 0, key="temporal_prev"):
+                st.session_state.temporal_focus_period = periods[focus_idx - 1]
+                st.rerun()
+        with nav_col2:
+            focus_period = st.select_slider(
+                "拖动时间轴查看兴趣演进",
+                options=periods,
+                key="temporal_focus_period",
+            )
+        with nav_col3:
+            if st.button("下一期 →", disabled=focus_idx == len(periods) - 1, key="temporal_next"):
+                st.session_state.temporal_focus_period = periods[focus_idx + 1]
+                st.rerun()
+
+        focus_idx = periods.index(st.session_state.temporal_focus_period)
+    else:
+        focus_period = None
+
+    focus_detail = period_options.get(focus_period, {}) if focus_period else {}
+    focus_intensity = next((i for i in intensity if i.get("period") == focus_period), {})
+    focus_top_themes = focus_detail.get("top_themes", [])
+    focus_theme_names = {t["theme"] for t in focus_top_themes[:5]}
+
+    current_weights = {}
+    prev_weights = {}
+    if periods and theme_timeline:
+        prev_idx = max(0, focus_idx - 1)
+        for item in theme_timeline:
+            weights = item.get("weights", [])
+            if focus_idx < len(weights):
+                current_weights[item["theme"]] = weights[focus_idx]
+            if prev_idx < len(weights):
+                prev_weights[item["theme"]] = weights[prev_idx]
+    theme_deltas = sorted(
+        (
+            {"theme": theme, "delta": weight - prev_weights.get(theme, 0), "weight": weight}
+            for theme, weight in current_weights.items()
+        ),
+        key=lambda x: abs(x["delta"]),
+        reverse=True,
+    )
+
+    theme_bucket = {}
+    for bucket, label in (("core", "稳定核"), ("emerging", "新兴"), ("fading", "淡出"), ("spike", "阶段性")):
+        for item in stability.get(bucket, []):
+            theme_bucket[item["theme"]] = label
+
+    bucket_colors = {
+        "稳定核": "#2563EB",
+        "新兴": "#16A34A",
+        "淡出": "#7C3AED",
+        "阶段性": "#F97316",
+        "普通": "#94A3B8",
+    }
+
+    if focus_period:
+        st.subheader("🎛️ 当前时段洞察")
+        shift_hit = next(
+            (
+                s for s in significant_shifts
+                if s.get("from") == focus_period or s.get("to") == focus_period
+            ),
+            None,
+        )
+        d_col1, d_col2, d_col3, d_col4 = st.columns(4)
+        with d_col1:
+            st.metric("当前时段", focus_period)
+        with d_col2:
+            st.metric("笔记", focus_intensity.get("note_count", 0))
+        with d_col3:
+            st.metric("想法", focus_intensity.get("review_count", 0))
+        with d_col4:
+            st.metric("划线", focus_intensity.get("highlight_count", 0))
+        if focus_top_themes:
+            st.caption("本期主导主题: " + " · ".join(f"{t['theme']} {t['weight']:.1%}" for t in focus_top_themes[:4]))
+        if shift_hit:
+            st.info(f"变化显著时段: {shift_hit['from']} → {shift_hit['to']}，变化幅度 {shift_hit['delta']:.2f}")
+
+        insight_col1, insight_col2 = st.columns([3, 2])
+        with insight_col1:
+            st.markdown("**⚡ 当前时段主题脉冲**")
+            if focus_top_themes:
+                df_focus = pd.DataFrame(focus_top_themes[:8])
+                df_focus["类型"] = df_focus["theme"].map(theme_bucket).fillna("普通")
+                fig_focus = px.bar(
+                    df_focus.sort_values("weight"),
+                    x="weight",
+                    y="theme",
+                    orientation="h",
+                    color="类型",
+                    color_discrete_map=bucket_colors,
+                    labels={"weight": "本期占比", "theme": ""},
+                    text="weight",
+                )
+                fig_focus.update_traces(texttemplate="%{text:.1%}", textposition="outside")
+                fig_focus.update_layout(
+                    height=360,
+                    xaxis_tickformat=".0%",
+                    margin=dict(l=120, r=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                st.plotly_chart(fig_focus, use_container_width=True)
+            else:
+                st.caption("本期暂无主题数据。")
+
+        with insight_col2:
+            st.markdown("**🗓️ 时段详情**")
+            detail = focus_detail or (period_details[-1] if period_details else {})
+            if detail:
+                st.caption(f"当前展示: {detail['period']}")
+                st.markdown("**相邻时段变化**")
+                if focus_idx == 0:
+                    st.caption("第一期暂无上一时段对比。")
+                else:
+                    for item in theme_deltas[:5]:
+                        arrow = "↑" if item["delta"] > 0 else "↓"
+                        color = "#16A34A" if item["delta"] > 0 else "#7C3AED"
+                        st.markdown(
+                            f"<span style='color:{color};font-weight:700'>{arrow} {item['theme']}</span> "
+                            f"{item['delta']:+.1%} · 当前 {item['weight']:.1%}",
+                            unsafe_allow_html=True,
+                        )
+                st.markdown("**代表性笔记**")
+                for note in detail.get("sample_notes", [])[:3]:
+                    type_label = "想法" if note["type"] == "review" else "划线"
+                    st.markdown(f"- *{note['content'][:100]}{'...' if len(note['content']) > 100 else ''}*")
+                    st.caption(f"《{note['book_title']}》 | {type_label} | {note['theme']}")
+            else:
+                st.caption("暂无时段详情。")
 
     # LLM 叙事
     narrative = analysis.get("narrative", {})
@@ -691,7 +836,6 @@ def view_temporal(analysis):
             st.markdown(narrative.get("clues") or "—")
 
     # 变与不变卡片
-    stability = analysis.get("stability", {})
     st.subheader("🔄 变与不变")
     s_col1, s_col2, s_col3, s_col4 = st.columns(4)
     with s_col1:
@@ -725,22 +869,28 @@ def view_temporal(analysis):
             st.caption("暂无")
 
     # 阅读强度
-    intensity = analysis.get("intensity", [])
     if intensity:
         st.subheader("📊 阅读强度")
         df_int = pd.DataFrame(intensity)
+        active_periods = [p == focus_period for p in df_int["period"]]
+        highlight_line = ["#0F172A" if active else "rgba(148, 163, 184, 0.2)" for active in active_periods]
+        highlight_width = [3 if active else 0 for active in active_periods]
         fig_int = go.Figure()
         fig_int.add_trace(go.Bar(
             x=df_int["period"],
             y=df_int["highlight_count"],
             name="划线",
-            marker_color="#93C5FD",
+            marker_color=["#38BDF8" if active else "rgba(147, 197, 253, 0.35)" for active in active_periods],
+            marker_line_color=highlight_line,
+            marker_line_width=highlight_width,
         ))
         fig_int.add_trace(go.Bar(
             x=df_int["period"],
             y=df_int["review_count"],
             name="想法",
-            marker_color="#2563EB",
+            marker_color=["#1D4ED8" if active else "rgba(37, 99, 235, 0.35)" for active in active_periods],
+            marker_line_color=highlight_line,
+            marker_line_width=highlight_width,
         ))
         fig_int.update_layout(
             barmode="stack",
@@ -753,7 +903,6 @@ def view_temporal(analysis):
 
     chart_col1, chart_col2 = st.columns(2)
 
-    theme_timeline = analysis.get("theme_timeline", [])
     top_n = st.slider("热力图/趋势线主题数", min_value=5, max_value=20, value=12, key="temporal_top_n")
 
     with chart_col1:
@@ -776,6 +925,8 @@ def view_temporal(analysis):
                 height=max(400, top_n * 28),
                 margin=dict(l=120),
             )
+            if focus_period:
+                fig_heat.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color="#F97316")
             st.plotly_chart(fig_heat, use_container_width=True)
 
     with chart_col2:
@@ -791,16 +942,22 @@ def view_temporal(analysis):
             line_themes = theme_timeline[:top_n]
             for i, item in enumerate(line_themes):
                 theme = item["theme"]
-                width = 3 if theme in highlight_themes else 1
+                is_focus_theme = theme in focus_theme_names
+                width = 4 if is_focus_theme else 3 if theme in highlight_themes else 1
                 dash = "solid" if theme in highlight_themes else "dot"
+                marker_sizes = [12 if p == focus_period else 5 for p in periods]
                 fig_line.add_trace(go.Scatter(
                     x=periods,
                     y=item["weights"],
                     mode="lines+markers",
                     name=theme,
                     line=dict(width=width, dash=dash, color=colors[i % len(colors)]),
+                    opacity=1 if is_focus_theme or theme in highlight_themes else 0.35,
+                    marker=dict(size=marker_sizes, line=dict(width=1, color="white")),
                     hovertemplate="%{x}<br>%{y:.1%}<extra>" + theme + "</extra>",
                 ))
+            if focus_period:
+                fig_line.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color="#F97316")
             legend_rows = max(1, (len(line_themes) + 2) // 3)
             legend_margin = 50 + legend_rows * 28
             fig_line.update_layout(
@@ -811,30 +968,6 @@ def view_temporal(analysis):
                 margin=dict(b=legend_margin),
             )
             st.plotly_chart(fig_line, use_container_width=True)
-
-    # 时段详情
-    period_details = analysis.get("period_details", [])
-    if period_details:
-        st.subheader("🗓️ 时段详情")
-        period_options = {d["period"]: d for d in period_details}
-        selected = st.selectbox("选择时段", list(period_options.keys()), key="temporal_period")
-        detail = period_options[selected]
-
-        t_col1, t_col2 = st.columns([1, 2])
-        with t_col1:
-            st.markdown("**Top 主题**")
-            for t in detail.get("top_themes", []):
-                st.markdown(f"- `{t['theme']}` — {t['weight']:.1%}")
-        with t_col2:
-            st.markdown("**代表性笔记**")
-            for note in detail.get("sample_notes", []):
-                type_label = "想法" if note["type"] == "review" else "划线"
-                st.markdown(
-                    f"- *{note['content'][:150]}{'...' if len(note['content']) > 150 else ''}*"
-                )
-                st.caption(
-                    f"《{note['book_title']}》 | {type_label} | {note['theme']} | {note['create_time']}"
-                )
 
 
 def main():
