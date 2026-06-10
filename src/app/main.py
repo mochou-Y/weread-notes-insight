@@ -788,7 +788,8 @@ def view_temporal(analysis):
                     highlight_themes.add(item["theme"])
 
             colors = px.colors.qualitative.Set2
-            for i, item in enumerate(theme_timeline[:top_n]):
+            line_themes = theme_timeline[:top_n]
+            for i, item in enumerate(line_themes):
                 theme = item["theme"]
                 width = 3 if theme in highlight_themes else 1
                 dash = "solid" if theme in highlight_themes else "dot"
@@ -800,12 +801,14 @@ def view_temporal(analysis):
                     line=dict(width=width, dash=dash, color=colors[i % len(colors)]),
                     hovertemplate="%{x}<br>%{y:.1%}<extra>" + theme + "</extra>",
                 ))
+            legend_rows = max(1, (len(line_themes) + 2) // 3)
+            legend_margin = 50 + legend_rows * 28
             fig_line.update_layout(
                 xaxis_title="时段",
                 yaxis_tickformat=".0%",
-                height=max(400, min(top_n, 8) * 40),
-                legend=dict(orientation="h", yanchor="bottom", y=-0.35),
-                margin=dict(b=100),
+                height=max(400, min(top_n, 8) * 40) + legend_margin,
+                legend=dict(orientation="h", yanchor="top", y=-0.28, xanchor="center", x=0.5),
+                margin=dict(b=legend_margin),
             )
             st.plotly_chart(fig_line, use_container_width=True)
 
