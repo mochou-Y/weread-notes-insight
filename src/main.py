@@ -381,10 +381,13 @@ def cmd_status(args):
 
 
 def cmd_analyze(args):
-    """深度分析命令（噪声 / 时间演变）"""
+    """深度分析命令（噪声 / 时间演变 / 情绪洞察）"""
     if not settings.openai_api_key:
         print("错误: 请设置环境变量 OPENAI_API_KEY")
         sys.exit(1)
+
+    if args.mode != "emotion" and args.sample_limit is not None:
+        print("警告: --sample-limit 仅在 emotion 模式下生效，当前将忽略")
 
     if args.mode == "temporal":
         print("开始时间维度分析...")
@@ -392,6 +395,14 @@ def cmd_analyze(args):
 
         analyzer = TemporalAnalyzer()
         analyzer.run()
+        return
+
+    if args.mode == "emotion":
+        print("开始情绪洞察分析...")
+        from src.analyze.emotion_analyzer import EmotionAnalyzer
+
+        analyzer = EmotionAnalyzer()
+        analyzer.run(sample_limit=args.sample_limit)
         return
 
     print("开始噪声深度分析...")
@@ -452,8 +463,9 @@ def main():
     # analyze 命令
     analyze_parser = subparsers.add_parser("analyze", help="噪声深度分析")
     analyze_parser.add_argument("--mode", type=str, default="all",
-                                choices=["subcluster", "bridge", "profile", "all", "temporal"],
-                                help="分析模式: subcluster(子聚类), bridge(桥接分析), profile(用户画像), all(全部), temporal(时间演变)")
+                                choices=["subcluster", "bridge", "profile", "all", "temporal", "emotion"],
+                                help="分析模式: subcluster(子聚类), bridge(桥接分析), profile(用户画像), all(全部), temporal(时间演变), emotion(情绪洞察)")
+    analyze_parser.add_argument("--sample-limit", type=int, help="emotion 模式调试用：限制分析笔记数量")
 
     # status 命令
     status_parser = subparsers.add_parser("status", help="查看数据状态")
