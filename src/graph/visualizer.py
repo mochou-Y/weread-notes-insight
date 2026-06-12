@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 from pyvis.network import Network
 
+from src.app.theme import COLORS
 from src.data.models import Book, GraphEdge, GraphNode, Note, Theme
 
 
@@ -142,15 +143,15 @@ class GraphVisualizer:
         net = Network(
             height="800px",
             width="100%",
-            bgcolor="#ffffff",
-            font_color="#333333",
+            bgcolor=COLORS["bg"],
+            font_color=COLORS["text"],
         )
 
         # 节点颜色配置
         colors = {
-            "theme": "#FF6B6B",
-            "note": "#4ECDC4",
-            "book": "#EA38C1",
+            "theme": COLORS["primary"],
+            "note": COLORS["secondary"],
+            "book": COLORS["accent"],
         }
 
         # 添加节点
@@ -158,23 +159,23 @@ class GraphVisualizer:
             net.add_node(
                 node.id,
                 label=node.label[:30],
-                color=colors.get(node.type, "#999999"),
+                color=colors.get(node.type, COLORS["neutral"]),
                 title=f"{node.label}\n类型: {node.type}",
                 size=30 if node.type == "theme" else 15,
             )
 
         # 添加边
         edge_colors = {
-            "contains": "#999999",
-            "from": "#45B7D1",
-            "similar": "#FF6B6B",
+            "contains": COLORS["neutral"],
+            "from": COLORS["accent"],
+            "similar": COLORS["purple"],
         }
 
         for edge in edges:
             net.add_edge(
                 edge.source,
                 edge.target,
-                color=edge_colors.get(edge.type, "#999999"),
+                color=edge_colors.get(edge.type, COLORS["neutral"]),
                 title=f"关系: {edge.type}" + (f"\n相似度: {edge.score:.2f}" if edge.score else ""),
             )
 

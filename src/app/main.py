@@ -1,5 +1,7 @@
 """Streamlit 应用入口"""
 
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -16,10 +18,17 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.api.weread import DataLoader
+from src.app.charts import apply_chart_theme, horizontal_bar, qualitative_palette, status_color_map
+from src.app.theme import COLORS, apply_theme
+from src.app.ui import insight_card, page_header, quote_card, section, tag_list
 from src.data.models import Theme
 
 NOISE_ANALYSIS_PATH = project_root / "log" / "insights_output" / "noise_cross_cognitive.json"
 TEMPORAL_ANALYSIS_PATH = project_root / "log" / "insights_output" / "temporal_evolution.json"
+
+
+class MissingDataError(RuntimeError):
+    """Raised when required local data artifacts are not ready."""
 
 
 def _noise_analysis_mtime() -> float:
@@ -60,6 +69,8 @@ def load_data():
 
     # 加载笔记
     all_notes = loader.load_all_notes()
+    if not all_notes:
+        raise MissingDataError("未找到原始笔记数据，请先运行数据同步命令。")
 
     # 过滤笔记：去除书签、空内容、包含[插图]的笔记
     notes = [
@@ -76,12 +87,16 @@ def load_data():
 
     # 加载聚类结果
     themes_path = loader.processed_dir / "themes.json"
+    if not themes_path.exists():
+        raise MissingDataError("未找到聚类结果 data/processed/themes.json，请先生成 embedding 并运行聚类。")
     with open(themes_path, encoding="utf-8") as f:
         themes_data = json.load(f)
     themes = [Theme(**t) for t in themes_data["themes"]]
 
     # 加载 labels
     labels_path = loader.processed_dir / "labels.npy"
+    if not labels_path.exists():
+        raise MissingDataError("未找到聚类标签 data/processed/labels.npy，请先运行聚类命令。")
     labels = np.load(labels_path)
 
     # 加载 UMAP 坐标
@@ -96,7 +111,11 @@ def load_data():
 
 def view_overview(notes, themes, labels, coords_2d):
     """概览散点图视图"""
-    st.header("📊 聚类概览")
+    page_header(
+        "阅读画像总览",
+        "从主题聚类、笔记分布和噪声点中快速理解你的阅读兴趣结构。",
+        eyebrow="Overview",
+    )
 
     if coords_2d is None:
         st.warning("未找到 UMAP 坐标数据，请重新运行 `cluster` 命令")
@@ -129,8 +148,8 @@ def view_overview(notes, themes, labels, coords_2d):
         xaxis_title="",
         yaxis_title="",
         showlegend=True,
-        height=700,
     )
+    apply_chart_theme(fig, height=700)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -147,7 +166,7 @@ def view_overview(notes, themes, labels, coords_2d):
 
 def view_themes(themes, notes, book_map, labels):
     """主题列表视图"""
-    st.header("📚 主题列表")
+    page_header("主题列表", "按主题浏览阅读笔记，查看每个兴趣簇的代表性摘录。", eyebrow="Themes")
 
     # 筛选器
     col1, col2 = st.columns([1, 3])
@@ -174,7 +193,7 @@ def view_themes(themes, notes, book_map, labels):
 
 def view_notes(notes, themes, book_map, labels):
     """笔记详情视图"""
-    st.header("📝 笔记详情")
+    page_header("笔记证据库", "按主题或书籍检索原始笔记，用原文校验每个画像判断。", eyebrow="Evidence")
 
     # 筛选模式选择
     filter_mode = st.radio("筛选模式", ["按主题筛选", "按书籍筛选"], horizontal=True)
@@ -231,33 +250,14 @@ def view_notes(notes, themes, book_map, labels):
 
     # 笔记列表
     for note in filtered_notes[:50]:  # 限制显示数量
-        with st.container():
-            st.markdown(f"**{note.content[:200]}{'...' if len(note.content) > 200 else ''}**")
-            st.caption(f"📚 《{note.book_title}》 | 📖 {note.chapter} | 🕐 {note.create_time.strftime('%Y-%m-%d')}")
-            st.divider()
+        content = f"{note.content[:200]}{'...' if len(note.content) > 200 else ''}"
+        meta = f"《{note.book_title}》 | {note.chapter} | {note.create_time.strftime('%Y-%m-%d')}"
+        quote_card(content, meta)
 
 
 def _horizontal_bar(df, x, y, title_color: str, x_label: str, height: int = 450):
     """横向柱状图，使用固定颜色避免低值过浅不可见"""
-    fig = px.bar(
-        df,
-        x=x,
-        y=y,
-        orientation="h",
-        labels={x: x_label, y: ""},
-        text=x,
-    )
-    fig.update_traces(
-        marker_color=title_color,
-        texttemplate="%{text:.1%}" if df[x].max() <= 1 else "%{text}",
-        textposition="outside",
-    )
-    fig.update_layout(
-        yaxis={"categoryorder": "total ascending"},
-        height=height,
-        showlegend=False,
-    )
-    return fig
+    return horizontal_bar(df, x=x, y=y, color=title_color, x_label=x_label, height=height)
 
 
 def _compute_cross_domain_books(notes, themes, bridge_notes: list[dict] | None = None):
@@ -389,7 +389,7 @@ def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: di
             x=[x0, x1],
             y=[y0, y1],
             mode="lines",
-            line=dict(width=1.5 + 6 * ratio, color=f"rgba(22, 163, 74, {0.35 + 0.55 * ratio})"),
+            line=dict(width=1.5 + 6 * ratio, color=f"rgba(95, 141, 78, {0.35 + 0.55 * ratio})"),
             hoverinfo="text",
             hovertext=f"{e['source']} ↔ {e['target']}<br>{e['count']} 条桥接笔记",
             showlegend=False,
@@ -400,7 +400,7 @@ def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: di
         x=[pos[node][0] for node in nodes],
         y=[pos[node][1] for node in nodes],
         mode="markers+text",
-        marker=dict(size=node_sizes, color="#2563EB", line=dict(width=2, color="white")),
+        marker=dict(size=node_sizes, color=COLORS["primary"], line=dict(width=2, color="white")),
         text=nodes,
         textposition="top center",
         textfont=dict(size=11),
@@ -414,9 +414,9 @@ def _bridge_network_figure(nodes: list[str], edges: list[dict], node_weights: di
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         height=620,
         margin=dict(l=40, r=40, t=40, b=40),
-        plot_bgcolor="rgba(0,0,0,0)",
         hovermode="closest",
     )
+    apply_chart_theme(fig)
     return fig
 
 
@@ -424,8 +424,7 @@ def _render_master_theme(profile: dict):
     """渲染阅读母题区块"""
     master = profile.get("master_theme", {})
     if master.get("title"):
-        st.subheader("🎯 阅读母题")
-        st.caption("跨书籍、跨主题反复出现的核心生命议题，所有分析线索的汇入口")
+        section("阅读母题", "跨书籍、跨主题反复出现的核心生命议题，所有分析线索的汇入口")
         src = master.get("source", "llm")
         if src == "fallback":
             st.warning("LLM 暂不可用，以下为基于桥接数据的规则归纳。请检查 API 连接后重新运行 profile。")
@@ -433,7 +432,7 @@ def _render_master_theme(profile: dict):
             st.info("本次 LLM 调用失败，展示的是上次成功生成的母题。")
         st.markdown(f"## {master['title']}")
         if master.get("statement"):
-            st.markdown(f"**{master['statement']}**")
+            insight_card("核心判断", master["statement"], tone="accent")
         if master.get("narrative"):
             st.markdown(master["narrative"])
 
@@ -449,7 +448,7 @@ def _render_master_theme(profile: dict):
                 for item in master["manifestations"]:
                     st.markdown(f"- {item}")
     elif master.get("llm_error") or master.get("error"):
-        st.subheader("🎯 阅读母题")
+        section("阅读母题")
         st.error(
             f"母题提炼失败：{master.get('llm_error') or master.get('error')}。"
             "请检查 OPENAI_API_KEY / OPENAI_BASE_URL 后重新运行 profile。"
@@ -458,7 +457,11 @@ def _render_master_theme(profile: dict):
 
 def view_noise_analysis(analysis, notes, themes, book_map):
     """噪声深度分析视图"""
-    st.header("🔍 噪声深度分析")
+    page_header(
+        "认知画像洞察",
+        "把离群笔记、跨主题桥接和阅读母题组织成对用户思维方式的解释。",
+        eyebrow="Profile",
+    )
 
     if analysis is None:
         st.info("尚未运行噪声分析。请先执行：`python -m src.main analyze`")
@@ -482,7 +485,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
     # 认知风格
     cognitive = profile.get("cognitive_style", {})
     if cognitive.get("keywords") or cognitive.get("description"):
-        st.subheader("🧠 认知风格")
+        section("认知风格", "从笔记语言、主题连接方式和关注对象中归纳出的思考习惯。")
         desc = cognitive.get("description", "")
         src = cognitive.get("source", "llm")
         if desc.startswith("分析失败"):
@@ -492,40 +495,39 @@ def view_noise_analysis(analysis, notes, themes, book_map):
         elif src == "cached" and cognitive.get("llm_error"):
             st.info("本次 LLM 调用失败，展示的是上次成功生成的认知风格。")
         if cognitive.get("keywords"):
-            st.markdown(" ".join(f"`{kw}`" for kw in cognitive["keywords"]))
+            tag_list(cognitive["keywords"])
         if desc and not desc.startswith("分析失败"):
-            st.markdown(desc)
+            insight_card("画像摘要", desc, tone="secondary")
 
     # 图表区
     chart_col1, chart_col2 = st.columns(2)
 
     with chart_col1:
-        st.subheader("📊 知识域分布")
+        section("知识域分布")
         domains = profile.get("knowledge_domains", [])[:15]
         if domains:
             df_domains = pd.DataFrame(domains)
             fig = _horizontal_bar(
                 df_domains, x="weight", y="domain",
-                title_color="#2563EB", x_label="占比",
+                title_color=COLORS["primary"], x_label="占比",
             )
             st.plotly_chart(fig, use_container_width=True)
 
     with chart_col2:
-        st.subheader("🔗 深度领域")
+        section("深度领域")
         depth = profile.get("depth_indicators", [])[:12]
         if depth:
             df_depth = pd.DataFrame(depth)
             fig = _horizontal_bar(
                 df_depth, x="bridge_count", y="domain",
-                title_color="#EA580C", x_label="桥接次数",
+                title_color=COLORS["accent"], x_label="桥接次数",
             )
             st.plotly_chart(fig, use_container_width=True)
 
     # 主题关联网络（替代原交叉兴趣柱状图 + 桥接洞察列表）
     bridges = analysis.get("bridge_patterns", [])
     if bridges:
-        st.subheader("🌉 主题关联网络")
-        st.caption("节点 = 主题，节点越大表示桥接越活跃；连线越粗表示两个主题之间的桥接笔记越多")
+        section("主题关联网络", "节点 = 主题，节点越大表示桥接越活跃；连线越粗表示两个主题之间的桥接笔记越多")
 
         max_bridge_count = max(b["count"] for b in bridges)
         ctrl_col1, ctrl_col2 = st.columns(2)
@@ -558,7 +560,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
                 st.markdown(f"**{selected['source']}** ↔ **{selected['target']}**")
                 st.metric("桥接笔记数", selected["count"])
                 if selected.get("insight"):
-                    st.info(selected["insight"])
+                    insight_card("桥接洞察", selected["insight"], tone="accent")
             with detail_col2:
                 st.markdown("**代表性笔记**")
                 for note in selected.get("sample_notes", []):
@@ -572,11 +574,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
         cross_books = []
 
     if cross_books:
-        st.subheader("📖 跨领域书籍")
-        st.caption(
-            "笔记横跨多个思维主题，或含大量「桥接笔记」——"
-            "这类书可能是多种认知领域的交汇点，值得重读"
-        )
+        section("跨领域书籍", "笔记横跨多个思维主题，或含大量桥接笔记，这类书可能是多种认知领域的交汇点，值得重读。")
 
         min_themes = st.slider("最少涉及主题数", min_value=2, max_value=6, value=2, key="cross_book_min_themes")
         filtered_books = [b for b in cross_books if b["theme_count"] >= min_themes]
@@ -590,7 +588,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
             ])
             fig = _horizontal_bar(
                 df_books, x="交叉指数", y="书名",
-                title_color="#7C3AED", x_label="交叉指数",
+                title_color=COLORS["purple"], x_label="交叉指数",
                 height=max(300, len(top_books) * 32),
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -611,7 +609,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
                         st.metric("交叉指数", book["cross_score"])
                     with cols[1]:
                         st.markdown("**涉及主题**")
-                        st.markdown(" ".join(f"`{t}`" for t in book["themes"]))
+                        tag_list(book["themes"])
                         if book.get("bridge_pairs"):
                             st.markdown("**桥接主题对**")
                             for pair in book["bridge_pairs"][:8]:
@@ -621,7 +619,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
                             for note in book["sample_bridge_notes"]:
                                 st.markdown(f"- *{note}*")
     elif analysis is not None:
-        st.subheader("📖 跨领域书籍")
+        section("跨领域书籍")
         st.info("未识别到跨领域书籍。请重新运行 `python -m src.main analyze --mode profile` 生成完整数据。")
 
     _render_master_theme(profile)
@@ -629,7 +627,7 @@ def view_noise_analysis(analysis, notes, themes, book_map):
     # 噪声微主题
     micro_themes = analysis.get("micro_themes", [])
     if micro_themes:
-        st.subheader("🔬 噪声微主题")
+        section("噪声微主题", "未进入主聚类、但仍可能暴露个人兴趣边缘和潜在探索方向的笔记簇。")
         note_map = {n.id: n for n in notes}
         for mt in micro_themes:
             with st.expander(f"**{mt['label']}** ({mt['size']} 条)"):
@@ -648,7 +646,11 @@ def view_noise_analysis(analysis, notes, themes, book_map):
 
 def view_temporal(analysis):
     """时间演变视图"""
-    st.header("📈 时间演变")
+    page_header(
+        "时间演变",
+        "观察阅读兴趣如何在不同时段中稳定、转向、淡出或阶段性爆发。",
+        eyebrow="Timeline",
+    )
 
     if analysis is None:
         st.info("尚未运行时间分析。请先执行：`python -m src.main analyze --mode temporal`")
@@ -735,16 +737,10 @@ def view_temporal(analysis):
         for item in stability.get(bucket, []):
             theme_bucket[item["theme"]] = label
 
-    bucket_colors = {
-        "稳定核": "#2563EB",
-        "新兴": "#16A34A",
-        "淡出": "#7C3AED",
-        "阶段性": "#F97316",
-        "普通": "#94A3B8",
-    }
+    bucket_colors = status_color_map()
 
     if focus_period:
-        st.subheader("🎛️ 当前时段洞察")
+        section("当前时段洞察", "拖动时间轴查看某一阶段的主导主题、阅读强度和相邻变化。")
         shift_hit = next(
             (
                 s for s in significant_shifts
@@ -804,7 +800,7 @@ def view_temporal(analysis):
                 else:
                     for item in theme_deltas[:5]:
                         arrow = "↑" if item["delta"] > 0 else "↓"
-                        color = "#16A34A" if item["delta"] > 0 else "#7C3AED"
+                        color = COLORS["secondary"] if item["delta"] > 0 else COLORS["purple"]
                         st.markdown(
                             f"<span style='color:{color};font-weight:700'>{arrow} {item['theme']}</span> "
                             f"{item['delta']:+.1%} · 当前 {item['weight']:.1%}",
@@ -821,7 +817,7 @@ def view_temporal(analysis):
     # LLM 叙事
     narrative = analysis.get("narrative", {})
     if narrative.get("unchanged") or narrative.get("shifts") or narrative.get("clues"):
-        st.subheader("📖 演变叙事")
+        section("演变叙事")
         if narrative.get("error"):
             st.warning(f"LLM 叙事部分失败: {narrative.get('clues', '')}")
         n_col1, n_col2, n_col3 = st.columns(3)
@@ -836,7 +832,7 @@ def view_temporal(analysis):
             st.markdown(narrative.get("clues") or "—")
 
     # 变与不变卡片
-    st.subheader("🔄 变与不变")
+    section("变与不变")
     s_col1, s_col2, s_col3, s_col4 = st.columns(4)
     with s_col1:
         st.markdown("**稳定核**")
@@ -870,17 +866,17 @@ def view_temporal(analysis):
 
     # 阅读强度
     if intensity:
-        st.subheader("📊 阅读强度")
+        section("阅读强度")
         df_int = pd.DataFrame(intensity)
         active_periods = [p == focus_period for p in df_int["period"]]
-        highlight_line = ["#0F172A" if active else "rgba(148, 163, 184, 0.2)" for active in active_periods]
+        highlight_line = [COLORS["text"] if active else "rgba(148, 163, 184, 0.2)" for active in active_periods]
         highlight_width = [3 if active else 0 for active in active_periods]
         fig_int = go.Figure()
         fig_int.add_trace(go.Bar(
             x=df_int["period"],
             y=df_int["highlight_count"],
             name="划线",
-            marker_color=["#38BDF8" if active else "rgba(147, 197, 253, 0.35)" for active in active_periods],
+            marker_color=[COLORS["primary"] if active else "rgba(49, 92, 114, 0.28)" for active in active_periods],
             marker_line_color=highlight_line,
             marker_line_width=highlight_width,
         ))
@@ -888,7 +884,7 @@ def view_temporal(analysis):
             x=df_int["period"],
             y=df_int["review_count"],
             name="想法",
-            marker_color=["#1D4ED8" if active else "rgba(37, 99, 235, 0.35)" for active in active_periods],
+            marker_color=[COLORS["accent"] if active else "rgba(196, 122, 58, 0.28)" for active in active_periods],
             marker_line_color=highlight_line,
             marker_line_width=highlight_width,
         ))
@@ -896,9 +892,9 @@ def view_temporal(analysis):
             barmode="stack",
             xaxis_title="时段",
             yaxis_title="笔记数",
-            height=380,
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
+        apply_chart_theme(fig_int, height=380)
         st.plotly_chart(fig_int, use_container_width=True)
 
     chart_col1, chart_col2 = st.columns(2)
@@ -906,7 +902,7 @@ def view_temporal(analysis):
     top_n = st.slider("热力图/趋势线主题数", min_value=5, max_value=20, value=12, key="temporal_top_n")
 
     with chart_col1:
-        st.subheader("🌡️ 主题热力图")
+        section("主题热力图")
         if theme_timeline and periods:
             top_themes = theme_timeline[:top_n]
             z = [t["weights"] for t in top_themes]
@@ -915,7 +911,7 @@ def view_temporal(analysis):
                 z=z,
                 x=periods,
                 y=y_labels,
-                colorscale="Blues",
+                colorscale=[[0, COLORS["primary_soft"]], [1, COLORS["primary"]]],
                 zmin=0,
                 zmax=max(max(row) for row in z) if z else 1,
                 hovertemplate="时段: %{x}<br>主题: %{y}<br>占比: %{z:.1%}<extra></extra>",
@@ -926,11 +922,12 @@ def view_temporal(analysis):
                 margin=dict(l=120),
             )
             if focus_period:
-                fig_heat.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color="#F97316")
+                fig_heat.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color=COLORS["accent"])
+            apply_chart_theme(fig_heat, height=max(400, top_n * 28))
             st.plotly_chart(fig_heat, use_container_width=True)
 
     with chart_col2:
-        st.subheader("📈 主题趋势线")
+        section("主题趋势线")
         if theme_timeline and periods:
             fig_line = go.Figure()
             highlight_themes = set()
@@ -938,7 +935,7 @@ def view_temporal(analysis):
                 for item in stability.get(bucket, [])[:3]:
                     highlight_themes.add(item["theme"])
 
-            colors = px.colors.qualitative.Set2
+            colors = qualitative_palette()
             line_themes = theme_timeline[:top_n]
             for i, item in enumerate(line_themes):
                 theme = item["theme"]
@@ -957,7 +954,7 @@ def view_temporal(analysis):
                     hovertemplate="%{x}<br>%{y:.1%}<extra>" + theme + "</extra>",
                 ))
             if focus_period:
-                fig_line.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color="#F97316")
+                fig_line.add_vline(x=focus_period, line_width=3, line_dash="dash", line_color=COLORS["accent"])
             legend_rows = max(1, (len(line_themes) + 2) // 3)
             legend_margin = 50 + legend_rows * 28
             fig_line.update_layout(
@@ -967,6 +964,7 @@ def view_temporal(analysis):
                 legend=dict(orientation="h", yanchor="top", y=-0.28, xanchor="center", x=0.5),
                 margin=dict(b=legend_margin),
             )
+            apply_chart_theme(fig_line)
             st.plotly_chart(fig_line, use_container_width=True)
 
 
@@ -977,8 +975,7 @@ def main():
         page_icon="📚",
         layout="wide",
     )
-
-    st.title("📚 微信读书笔记主题洞察")
+    apply_theme()
 
     pages = ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察", "📈 时间演变"]
 
@@ -997,10 +994,24 @@ def main():
         st.rerun()
 
     # 加载数据
-    with st.spinner("加载数据..."):
-        notes, book_map, themes, labels, coords_2d = load_data()
-        noise_analysis = load_noise_analysis(_noise_analysis_mtime())
-        temporal_analysis = load_temporal_analysis(_temporal_analysis_mtime())
+    try:
+        with st.spinner("加载数据..."):
+            notes, book_map, themes, labels, coords_2d = load_data()
+            noise_analysis = load_noise_analysis(_noise_analysis_mtime())
+            temporal_analysis = load_temporal_analysis(_temporal_analysis_mtime())
+    except MissingDataError as exc:
+        page_header("数据尚未初始化", "当前本地缺少应用所需的数据文件。", eyebrow="Setup")
+        st.warning(str(exc))
+        st.markdown("请在项目根目录按顺序执行：")
+        st.code(
+            "cp .env.example .env\n"
+            "# 填写 .env 中的 WEREAD_COOKIE、EMBEDDING_API_KEY、OPENAI_API_KEY 等配置\n"
+            ".venv/bin/python -m src.main fetch --incremental\n"
+            ".venv/bin/python -m src.main embedding\n"
+            ".venv/bin/python -m src.main cluster",
+            language="bash",
+        )
+        return
 
     # 页面切换
     if page == "📊 概览":

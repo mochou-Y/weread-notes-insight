@@ -51,6 +51,7 @@ class Settings:
             cookie=os.getenv("WEREAD_COOKIE", ""),
             embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
             embedding_base_url=os.getenv("EMBEDDING_BASE_URL", "https://api.siliconflow.com/v1"),
+            embedding_model=os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B"),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             llm_model=os.getenv("LLM_MODEL", "qwen3.5-flash"),
