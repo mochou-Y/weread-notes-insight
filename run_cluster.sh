@@ -10,6 +10,11 @@
 export PYTHONIOENCODING=utf-8
 export LANG=en_US.UTF-8
 
+PYTHON_BIN="${PYTHON_BIN:-.venv/bin/python}"
+if [ ! -x "$PYTHON_BIN" ]; then
+    PYTHON_BIN="python"
+fi
+
 # 默认参数
 MIN_CLUSTER_SIZE=${1:-3}
 MIN_SAMPLES=${2:-2}
@@ -59,7 +64,7 @@ echo "" | tee -a "$LOG_FILE"
 echo "[命令1] 执行聚类..." | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 START_TIME=$(date +%s)
-.venv/Scripts/python -m src.main cluster \
+"$PYTHON_BIN" -m src.main cluster \
     --min-cluster-size "$MIN_CLUSTER_SIZE" \
     --min-samples "$MIN_SAMPLES" \
     --method "$METHOD" \
@@ -80,7 +85,7 @@ START_TIME_PHASE_2=$(date +%s)
 echo "" | tee -a "$LOG_FILE"
 echo "[命令2] 生成图谱..." | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-.venv/Scripts/python -m src.main graph --output "$OUTPUT_FILE" 2>&1 | tee -a "$LOG_FILE"
+"$PYTHON_BIN" -m src.main graph --output "$OUTPUT_FILE" 2>&1 | tee -a "$LOG_FILE"
 
 END_TIME_PHASE_2=$(date +%s)
 ELAPSED_PHASE_2=$((END_TIME_PHASE_2 - START_TIME_PHASE_2))

@@ -87,7 +87,7 @@ def cmd_embedding(args):
         sys.exit(0)
 
     embedder = Embedder()
-    embeddings = embedder.embed_notes(filtered_notes)
+    embeddings = embedder.embed_notes(filtered_notes, storage=storage)
     storage.save(embeddings)
     print("embedding生成完成!")
 

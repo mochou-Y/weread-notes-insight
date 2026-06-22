@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -23,6 +24,8 @@ class Settings:
     embedding_api_key: str = ""
     embedding_base_url: str = "https://api.siliconflow.com/v1"
     embedding_model: str = "Qwen/Qwen3-Embedding-4B"
+    embedding_dimensions: Optional[int] = None
+    embedding_batch_size: int = 10
 
     # LLM配置（OpenAI兼容接口）
     openai_api_key: str = ""
@@ -52,6 +55,8 @@ class Settings:
             embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
             embedding_base_url=os.getenv("EMBEDDING_BASE_URL", "https://api.siliconflow.com/v1"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B"),
+            embedding_dimensions=int(os.getenv("EMBEDDING_DIMENSIONS")) if os.getenv("EMBEDDING_DIMENSIONS") else None,
+            embedding_batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "10")),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             llm_model=os.getenv("LLM_MODEL", "qwen3.5-flash"),
