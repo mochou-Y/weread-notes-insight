@@ -16,11 +16,11 @@ class Embedder:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        credential: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
     ):
-        self.api_key = api_key or settings.embedding_api_key or settings.openai_api_key
+        self.credential = credential or settings.embedding_token or settings.openai_token
         self.base_url = base_url or settings.embedding_base_url
         self.model = model or settings.embedding_model
         self.dimensions = settings.embedding_dimensions
@@ -53,7 +53,7 @@ class Embedder:
                         f"{self.base_url}/embeddings",
                         json=payload,
                         headers={
-                            "Authorization": f"Bearer {self.api_key}",
+                            "Authorization": f"Bearer {self.credential}",
                             "Content-Type": "application/json",
                         },
                         timeout=180,

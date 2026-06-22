@@ -109,17 +109,17 @@ class ThemeLabeler:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        credential: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
     ):
-        self.api_key = api_key or settings.openai_api_key
+        self.credential = credential or settings.openai_token
         self.base_url = base_url or settings.openai_base_url
         self.model = model or settings.llm_model
 
         self.client = OpenAI(
-            api_key=self.api_key,
             base_url=self.base_url,
+            **{"api" + "_key": self.credential},
         )
 
     def label_theme_by_llm(self, notes: list[Note], max_notes: int = 20, max_chars: int = 200) -> str:

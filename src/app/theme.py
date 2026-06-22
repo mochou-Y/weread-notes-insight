@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import streamlit as st
-
 
 COLORS = {
     "bg": "#F8F6F0",
@@ -43,10 +41,9 @@ PALETTE = [
 ]
 
 
-def apply_theme() -> None:
-    """Apply a lightweight product theme on top of Streamlit defaults."""
-    st.markdown(
-        f"""
+def theme_css() -> str:
+    """Return CSS that keeps text readable across Streamlit themes."""
+    return f"""
         <style>
         :root {{
             --app-bg: {COLORS['bg']};
@@ -62,7 +59,36 @@ def apply_theme() -> None:
 
         .stApp {{
             background: radial-gradient(circle at top left, #FDFBF5 0, var(--app-bg) 34%, #F3F0E8 100%);
+        }}
+
+        .stApp, .stApp p, .stApp span, .stApp label,
+        .stApp div, .stApp li, .stApp small {{
             color: var(--text);
+        }}
+
+        [data-testid="stMarkdownContainer"],
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li,
+        [data-testid="stMarkdownContainer"] span,
+        [data-testid="stCaptionContainer"],
+        [data-testid="stCaptionContainer"] p,
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] p,
+        [data-baseweb="select"] *,
+        [data-baseweb="radio"] *,
+        input, textarea {{
+            color: var(--text) !important;
+        }}
+
+        .stApp a {{
+            color: var(--primary) !important;
+        }}
+
+        .stApp code {{
+            color: var(--primary) !important;
+            background: var(--primary-soft) !important;
         }}
 
         [data-testid="stSidebar"] {{
@@ -76,7 +102,7 @@ def apply_theme() -> None:
         }}
 
         h1, h2, h3 {{
-            color: var(--text);
+            color: var(--text) !important;
             letter-spacing: -0.02em;
         }}
 
@@ -89,11 +115,15 @@ def apply_theme() -> None:
         }}
 
         div[data-testid="stMetricLabel"] p {{
-            color: var(--text-muted);
+            color: var(--text-muted) !important;
         }}
 
         div[data-testid="stMetricValue"] {{
-            color: var(--primary);
+            color: var(--primary) !important;
+        }}
+
+        div[data-testid="stMetricDelta"] svg {{
+            fill: var(--text-muted) !important;
         }}
 
         div[data-testid="stExpander"] {{
@@ -121,7 +151,7 @@ def apply_theme() -> None:
         }}
 
         .app-eyebrow {{
-            color: var(--accent);
+            color: var(--accent) !important;
             font-size: 0.78rem;
             font-weight: 700;
             letter-spacing: 0.08em;
@@ -135,10 +165,11 @@ def apply_theme() -> None:
         }}
 
         .app-hero p, .section-caption, .quote-meta {{
-            color: var(--text-muted);
+            color: var(--text-muted) !important;
         }}
 
         .section-title {{
+            color: var(--text) !important;
             margin: 1.3rem 0 0.25rem;
             font-size: 1.25rem;
             font-weight: 750;
@@ -155,7 +186,7 @@ def apply_theme() -> None:
         .insight-card.purple {{ border-left-color: {COLORS['purple']}; }}
 
         .insight-card-title {{
-            color: var(--text);
+            color: var(--text) !important;
             font-weight: 750;
             margin-bottom: 0.35rem;
         }}
@@ -166,7 +197,7 @@ def apply_theme() -> None:
         }}
 
         .quote-content {{
-            color: var(--text);
+            color: var(--text) !important;
             font-weight: 650;
             line-height: 1.65;
         }}
@@ -174,7 +205,7 @@ def apply_theme() -> None:
         .tag-pill {{
             display: inline-block;
             background: var(--primary-soft);
-            color: var(--primary);
+            color: var(--primary) !important;
             border-radius: 999px;
             padding: 0.18rem 0.55rem;
             margin: 0.12rem 0.18rem 0.12rem 0;
@@ -185,11 +216,17 @@ def apply_theme() -> None:
         button[kind="primary"], .stButton > button {{
             border-radius: 999px;
             border: 1px solid var(--border);
+            color: var(--text) !important;
         }}
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+
+
+def apply_theme() -> None:
+    """Apply a lightweight product theme on top of Streamlit defaults."""
+    import streamlit as st
+
+    st.markdown(theme_css(), unsafe_allow_html=True)
 
 
 def tone_color(tone: str) -> str:

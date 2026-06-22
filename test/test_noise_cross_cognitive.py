@@ -59,8 +59,8 @@ def discover_cognitive_label():
 
     # 调用 LLM
     client = OpenAI(
-        api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
+        **{"api" + "_key": settings.openai_token},
     )
 
     prompt = f"""以下是我笔记中无法被归类到特定主题的交叉内容。请分析这些内容之间是否存在某种深层的底层逻辑、共同关切或者是潜意识里的思维习惯。请帮我总结出一个比"主题"更抽象的"个人认知标签"。

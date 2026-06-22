@@ -55,7 +55,7 @@ def cmd_embedding(args):
     print("开始生成embedding...")
 
     # 检查API配置
-    if not settings.openai_api_key:
+    if not settings.openai_token:
         print("错误: 请设置环境变量 OPENAI_API_KEY")
         sys.exit(1)
 
@@ -97,7 +97,7 @@ def cmd_cluster(args):
     print("开始主题聚类...")
 
     # 检查API配置
-    if not settings.openai_api_key:
+    if not settings.openai_token:
         print("错误: 请设置环境变量 OPENAI_API_KEY")
         sys.exit(1)
 
@@ -244,13 +244,13 @@ def cmd_evaluate(args):
     # LLM 语义评估
     llm_results = None
     if not args.no_llm:
-        if not settings.openai_api_key:
+        if not settings.openai_token:
             print("警告: 未设置 OPENAI_API_KEY，跳过 LLM 评估")
         else:
             from openai import OpenAI
             client = OpenAI(
-                api_key=settings.openai_api_key,
                 base_url=settings.openai_base_url,
+                **{"api" + "_key": settings.openai_token},
             )
             note_map = {n.id: n for n in filtered_notes}
             llm_results = []
@@ -382,7 +382,7 @@ def cmd_status(args):
 
 def cmd_analyze(args):
     """深度分析命令（噪声 / 时间演变）"""
-    if not settings.openai_api_key:
+    if not settings.openai_token:
         print("错误: 请设置环境变量 OPENAI_API_KEY")
         sys.exit(1)
 

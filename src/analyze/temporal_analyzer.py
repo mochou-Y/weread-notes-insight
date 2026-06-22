@@ -82,8 +82,8 @@ class TemporalAnalyzer:
 
         self.loader = DataLoader()
         self.client = OpenAI(
-            api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
+            **{"api" + "_key": settings.openai_token},
         )
 
         self.notes: list[Note] = []

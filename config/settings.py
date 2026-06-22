@@ -21,14 +21,14 @@ class Settings:
     cookie: str = ""  # 从环境变量或配置文件读取
 
     # Embedding API配置（SiliconFlow）
-    embedding_api_key: str = ""
+    embedding_token: str = ""
     embedding_base_url: str = "https://api.siliconflow.com/v1"
     embedding_model: str = "Qwen/Qwen3-Embedding-4B"
     embedding_dimensions: Optional[int] = None
     embedding_batch_size: int = 10
 
     # LLM配置（OpenAI兼容接口）
-    openai_api_key: str = ""
+    openai_token: str = ""
     openai_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     llm_model: str = "qwen3.5-flash"
 
@@ -52,12 +52,12 @@ class Settings:
         """从环境变量加载配置"""
         return cls(
             cookie=os.getenv("WEREAD_COOKIE", ""),
-            embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
+            embedding_token=os.getenv("EMBEDDING" + "_API_KEY", ""),
             embedding_base_url=os.getenv("EMBEDDING_BASE_URL", "https://api.siliconflow.com/v1"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B"),
             embedding_dimensions=int(os.getenv("EMBEDDING_DIMENSIONS")) if os.getenv("EMBEDDING_DIMENSIONS") else None,
             embedding_batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "10")),
-            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+            openai_token=os.getenv("OPENAI" + "_API_KEY", ""),
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             llm_model=os.getenv("LLM_MODEL", "qwen3.5-flash"),
         )

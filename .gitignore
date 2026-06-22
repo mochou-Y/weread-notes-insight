@@ -67,3 +67,16 @@ log/
 
 # MCP
 .playwright-mcp/
+
+# Company AI Submit Skill
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+logs/
+node_modules/
+.company-skill/
+.company-skill/logs/
+.company-skill/reports/

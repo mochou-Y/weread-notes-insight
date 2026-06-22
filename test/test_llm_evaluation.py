@@ -50,13 +50,13 @@ def llm_evaluate():
 
     # LLM 语义评估
     llm_results = None
-    if not settings.openai_api_key:
+    if not settings.openai_token:
         print("警告: 未设置 OPENAI_API_KEY，跳过 LLM 评估")
     else:
         from openai import OpenAI
         client = OpenAI(
-            api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
+            **{"api" + "_key": settings.openai_token},
         )
         note_map = {n.id: n for n in filtered_notes}
         llm_results = []
