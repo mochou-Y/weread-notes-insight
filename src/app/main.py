@@ -644,6 +644,18 @@ def view_noise_analysis(analysis, notes, themes, book_map):
                         st.caption(f"涉及书籍: {', '.join(books[:8])}{'...' if len(books) > 8 else ''}")
 
 
+def temporal_nav_target(periods, current_period, direction):
+    """Return the adjacent period for timeline navigation."""
+    if current_period not in periods:
+        return current_period
+    focus_idx = periods.index(current_period)
+    if direction == "prev" and focus_idx > 0:
+        return periods[focus_idx - 1]
+    if direction == "next" and focus_idx < len(periods) - 1:
+        return periods[focus_idx + 1]
+    return current_period
+
+
 def view_temporal(analysis):
     """时间演变视图"""
     page_header(
@@ -691,7 +703,15 @@ def view_temporal(analysis):
         nav_col1, nav_col2, nav_col3 = st.columns([1, 5, 1])
         with nav_col1:
             if st.button("← 上一期", disabled=focus_idx == 0, key="temporal_prev"):
-                st.session_state.temporal_focus_period = periods[focus_idx - 1]
+                st.session_state.temporal_focus_period = temporal_nav_target(
+                    periods, st.session_state.temporal_focus_period, "prev"
+                )
+                st.rerun()
+        with nav_col3:
+            if st.button("下一期 →", disabled=focus_idx == len(periods) - 1, key="temporal_next"):
+                st.session_state.temporal_focus_period = temporal_nav_target(
+                    periods, st.session_state.temporal_focus_period, "next"
+                )
                 st.rerun()
         with nav_col2:
             focus_period = st.select_slider(
@@ -699,10 +719,6 @@ def view_temporal(analysis):
                 options=periods,
                 key="temporal_focus_period",
             )
-        with nav_col3:
-            if st.button("下一期 →", disabled=focus_idx == len(periods) - 1, key="temporal_next"):
-                st.session_state.temporal_focus_period = periods[focus_idx + 1]
-                st.rerun()
 
         focus_idx = periods.index(st.session_state.temporal_focus_period)
     else:
