@@ -455,6 +455,191 @@ def _render_master_theme(profile: dict):
         )
 
 
+def navigation_pages() -> list[str]:
+    """Return sidebar pages in display order."""
+    return ["📊 概览", "📚 主题列表", "📝 笔记详情", "🧠 心理画像报告", "🔍 噪声洞察", "📈 时间演变"]
+
+
+def _percent(value: float | int | None) -> str:
+    if value is None:
+        return ""
+    return f"{value:.1%}"
+
+
+def build_psychological_report_lenses(analysis: dict | None, temporal_analysis: dict | None = None) -> list[dict]:
+    """Build judgment-first report sections from existing analysis artifacts."""
+    if not analysis:
+        return []
+
+    profile = analysis.get("user_profile", {})
+    cognitive = profile.get("cognitive_style", {})
+    domains = profile.get("knowledge_domains", [])
+    bridges = analysis.get("bridge_patterns", [])
+    micro_themes = analysis.get("micro_themes", [])
+    temporal_analysis = temporal_analysis or {}
+    stability = temporal_analysis.get("stability", {})
+    narrative = temporal_analysis.get("narrative", {})
+
+    lenses: list[dict] = []
+    desc = cognitive.get("description")
+    if desc and not desc.startswith("分析失败"):
+        keywords = cognitive.get("keywords", [])
+        lenses.append({
+            "title": "认知风格",
+            "subtitle": "你习惯怎样理解世界",
+            "judgment": desc,
+            "evidence": [
+                f"关键词: {' / '.join(keywords[:6])}" if keywords else "来自笔记语言、主题连接方式和关注对象。",
+                f"知识域样本: {' / '.join(d.get('domain', '') for d in domains[:3] if d.get('domain'))}" if domains else "知识域数据暂缺。",
+            ],
+            "tone": "secondary",
+        })
+
+    if domains:
+        top_domains = [d for d in domains[:4] if d.get("domain")]
+        domain_names = "、".join(d["domain"] for d in top_domains)
+        lenses.append({
+            "title": "核心议题",
+            "subtitle": "你反复会被哪些问题吸引",
+            "judgment": f"你的阅读注意力集中在 {domain_names} 等议题上。这更像是一组长期关注的问题，而不是简单的书籍分类。",
+            "evidence": [
+                f"{d['domain']}: {_percent(d.get('weight'))}" for d in top_domains if d.get("weight") is not None
+            ] or ["知识域权重来自画像分析结果。"],
+            "tone": "primary",
+        })
+
+    if bridges:
+        top_bridge = max(bridges, key=lambda item: item.get("count", 0))
+        themes = top_bridge.get("themes", [])
+        theme_pair = " ↔ ".join(themes[:2]) if len(themes) >= 2 else "跨主题连接"
+        insight = top_bridge.get("insight") or "这些桥接关系说明你经常把不同领域的问题放在一起理解。"
+        lenses.append({
+            "title": "价值张力",
+            "subtitle": "你会在哪些冲突或连接之间反复思考",
+            "judgment": f"最强的张力出现在 {theme_pair}。{insight}",
+            "evidence": [
+                f"桥接笔记: {top_bridge.get('count', 0)} 条",
+                f"桥接模式总数: {len(bridges)} 个",
+            ],
+            "tone": "accent",
+        })
+
+    core = stability.get("core", [])
+    emerging = stability.get("emerging", [])
+    fading = stability.get("fading", [])
+    shifts = narrative.get("shifts")
+    if core or emerging or fading or shifts:
+        stable_names = "、".join(item.get("theme", "") for item in core[:3] if item.get("theme")) or "若干稳定主题"
+        emerging_names = "、".join(item.get("theme", "") for item in emerging[:3] if item.get("theme"))
+        change_text = shifts or (f"稳定底色集中在 {stable_names}" + (f"，同时 {emerging_names} 正在增强。" if emerging_names else "。"))
+        lenses.append({
+            "title": "阅读转变",
+            "subtitle": "你的关注点如何随时间移动",
+            "judgment": change_text,
+            "evidence": [
+                f"稳定核: {stable_names}",
+                f"新兴主题: {emerging_names}" if emerging_names else "新兴主题暂不明显。",
+            ],
+            "tone": "purple",
+        })
+
+    if micro_themes:
+        top_micro = sorted(micro_themes, key=lambda item: item.get("size", 0), reverse=True)[:3]
+        labels = "、".join(item.get("label", "") for item in top_micro if item.get("label"))
+        lenses.append({
+            "title": "边缘兴趣",
+            "subtitle": "尚未成为主线、但可能正在冒头的方向",
+            "judgment": f"你的边缘笔记里出现了 {labels}。这些内容未必已经构成稳定偏好，但适合作为下一轮自我观察的线索。",
+            "evidence": [f"{item.get('label', '未命名')}: {item.get('size', 0)} 条" for item in top_micro],
+            "tone": "primary",
+        })
+
+    return lenses
+
+
+def _render_report_lens(lens: dict) -> None:
+    st.markdown(f"### {lens['title']}")
+    st.caption(lens.get("subtitle", ""))
+    insight_card("中等判断", lens["judgment"], tone=lens.get("tone", "primary"))
+    for item in lens.get("evidence", []):
+        if item:
+            st.markdown(f"- {item}")
+
+
+def view_psychological_report(analysis, temporal_analysis, notes, themes, book_map):
+    """Report-style psychological reading profile page."""
+    page_header(
+        "心理画像报告",
+        "把阅读痕迹整理成多个心理分析镜头：判断先行，解释随后，证据可下钻验证。",
+        eyebrow="Psychological Profile",
+    )
+
+    if analysis is None:
+        st.info("尚未运行画像分析。请先执行：`python -m src.main analyze --mode profile`")
+        return
+
+    lenses = build_psychological_report_lenses(analysis, temporal_analysis)
+    if not lenses:
+        st.warning("当前分析结果不足以生成心理画像报告，请重新运行画像分析。")
+        return
+
+    stats = analysis.get("noise_stats", {})
+    bridges = analysis.get("bridge_patterns", [])
+    micro_themes = analysis.get("micro_themes", [])
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("分析镜头", len(lenses))
+    with col2:
+        st.metric("桥接模式", len(bridges))
+    with col3:
+        st.metric("边缘簇", stats.get("sub_clusters", len(micro_themes)))
+
+    section("报告摘要", "以下判断来自阅读主题、桥接笔记、边缘兴趣和时间变化；它描述的是阅读关注，不是人格诊断。")
+    lead = lenses[0]["judgment"]
+    insight_card("你可以先带走的判断", lead, tone="accent")
+
+    section("多镜头画像", "每个镜头先给判断，再给证据线索；完整原文放在证据抽屉里。")
+    for idx, lens in enumerate(lenses):
+        if idx % 2 == 0:
+            cols = st.columns(2)
+        with cols[idx % 2]:
+            _render_report_lens(lens)
+
+    profile = analysis.get("user_profile", {})
+    master = profile.get("master_theme", {})
+    if master.get("statement") or master.get("title"):
+        section("补充判断", "如果现有分析已经提炼出母题，这里作为补充，而不是强行统摄所有镜头。")
+        title = master.get("title") or "阅读母题"
+        body = master.get("statement") or master.get("narrative", "")
+        insight_card(title, body, tone="purple")
+
+    cross_books = analysis.get("cross_domain_books") or _compute_cross_domain_books(notes, themes, _load_bridge_notes())
+    if cross_books:
+        section("代表性书籍", "这些书值得注意，是因为它们连接了多个认知区域，而不只是笔记数量多。")
+        for book in cross_books[:3]:
+            st.markdown(f"### 《{book['title']}》")
+            insight_card(
+                "为什么值得重看",
+                f"它同时连接 {book['theme_count']} 个主题，并包含 {book['bridge_note_count']} 条桥接笔记，适合作为验证画像判断的关键文本。",
+                tone="secondary",
+            )
+            tag_list(book.get("themes", [])[:8])
+            with st.expander("查看这本书的证据"):
+                book_meta = book_map.get(book["book_id"])
+                if book_meta and book_meta.cover:
+                    st.image(book_meta.cover, width=100)
+                st.caption(f"作者: {book.get('author', '')}")
+                for note in book.get("sample_bridge_notes", [])[:3]:
+                    st.markdown(f"- *{note}*")
+
+    section("阅读这份报告的边界", "中等判断意味着它应该有观点，但不越界。")
+    st.markdown(
+        "- 这些判断描述的是你的阅读痕迹和关注模式，不是心理诊断。\n"
+        "- 如果某个判断让你觉得不准，优先查看证据抽屉，判断是数据不足、主题命名偏差，还是确实反映了一个你没意识到的模式。\n"
+        "- 原始笔记仍然是最终证据；报告负责压缩和组织意义。"
+    )
+
+
 def view_noise_analysis(analysis, notes, themes, book_map):
     """噪声深度分析视图"""
     page_header(
@@ -993,7 +1178,7 @@ def main():
     )
     apply_theme()
 
-    pages = ["📊 概览", "📚 主题列表", "📝 笔记详情", "🔍 噪声洞察", "📈 时间演变"]
+    pages = navigation_pages()
 
     # 侧边栏导航（放在刷新按钮之前，并用 key 持久化选中页）
     page = st.sidebar.radio(
@@ -1034,6 +1219,8 @@ def main():
         view_overview(notes, themes, labels, coords_2d)
     elif page == "📚 主题列表":
         view_themes(themes, notes, book_map, labels)
+    elif page == "🧠 心理画像报告":
+        view_psychological_report(noise_analysis, temporal_analysis, notes, themes, book_map)
     elif page == "🔍 噪声洞察":
         view_noise_analysis(noise_analysis, notes, themes, book_map)
     elif page == "📈 时间演变":
