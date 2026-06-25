@@ -1,6 +1,6 @@
 import unittest
 
-from src.app.main import build_psychological_report_lenses, navigation_pages
+from src.app.main import build_psychological_profile_report, navigation_pages
 
 
 class AppPsychologicalReportTest(unittest.TestCase):
@@ -11,7 +11,7 @@ class AppPsychologicalReportTest(unittest.TestCase):
         self.assertIn("🔍 噪声洞察", pages)
         self.assertLess(pages.index("🧠 心理画像报告"), pages.index("🔍 噪声洞察"))
 
-    def test_report_lenses_turn_analysis_into_judgment_first_sections(self):
+    def test_report_builder_creates_single_narrative_report_not_lens_list(self):
         analysis = {
             "noise_stats": {"total": 12, "sub_clusters": 3},
             "user_profile": {
@@ -37,12 +37,16 @@ class AppPsychologicalReportTest(unittest.TestCase):
             "narrative": {"shifts": "近期从自我理解转向技术与组织问题。"},
         }
 
-        lenses = build_psychological_report_lenses(analysis, temporal)
+        report = build_psychological_profile_report(analysis, temporal)
 
-        self.assertGreaterEqual(len(lenses), 4)
-        self.assertEqual(lenses[0]["title"], "认知风格")
-        self.assertIn("你常从个体处境切入复杂系统问题", lenses[0]["judgment"])
-        self.assertTrue(all("judgment" in lens and "evidence" in lens for lens in lenses))
+        self.assertIn("headline", report)
+        self.assertIn("thesis", report)
+        self.assertIn("chapters", report)
+        self.assertIn("evidence_appendix", report)
+        self.assertIn("你常从个体处境切入复杂系统问题", report["thesis"])
+        self.assertEqual([chapter["id"] for chapter in report["chapters"]], ["orientation", "tension", "movement"])
+        self.assertTrue(all("paragraph" in chapter for chapter in report["chapters"]))
+        self.assertGreaterEqual(len(report["evidence_appendix"]), 3)
 
 
 if __name__ == "__main__":
